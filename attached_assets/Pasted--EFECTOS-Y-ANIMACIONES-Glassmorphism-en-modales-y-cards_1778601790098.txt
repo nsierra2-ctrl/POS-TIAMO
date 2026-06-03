@@ -1,0 +1,82 @@
+✨ EFECTOS Y ANIMACIONES
+═══════════════════════════════════════
+- Glassmorphism en modales y cards: backdrop-filter blur(20px), 
+  fondo rgba con baja opacidad, borde semi-transparente
+- Neumorphism sutil en botones de acción primaria
+- Animaciones de entrada con Framer Motion (o CSS @keyframes):
+  • fadeInUp para cards al cargar
+  • staggerChildren para listas de items del menú
+  • spring physics en modales (scale 0.8 → 1 con bounce)
+- Hover effects en tarjetas de productos:
+  • Scale transform 1.03
+  • Glow box-shadow con color del acento
+  • Reveal de información adicional con slide-up
+- Loading skeleton shimmer animado (gradiente que barre de izquierda a derecha)
+- Micro-animaciones en botones: ripple effect al hacer click
+- Contador de cantidad con animación flip (como los marcadores de béisbol)
+- Toast notifications con animación slide-in y barra de progreso
+
+═══════════════════════════════════════
+🧩 COMPONENTES PREMIUM
+═══════════════════════════════════════
+NAVBAR/SIDEBAR:
+- Sidebar colapsable con animación suave
+- Iconos con tooltip animado al hacer hover
+- Indicador de ruta activa con línea deslizante animada
+- Avatar del cajero con status indicator (punto verde pulsante)
+
+GRID DE PRODUCTOS:
+- Masonry grid o CSS Grid con auto-fill minmax
+- Cards con imagen de fondo con efecto parallax suave al hover
+- Badge de categoría con color único por tipo (entradas, platos fuertes, bebidas)
+- Indicador de disponibilidad con dot animado
+- Precio con tipografía destacada y símbolo $ con tamaño menor
+
+CARRITO/ORDEN:
+- Panel lateral con scroll suave y separadores elegantes
+- Item rows con animación de entrada staggered
+- Subtotal que cambia con animación de contador numérico
+- Botón de procesar pago con efecto de carga circular (progress ring SVG)
+- Resumen con línea separadora animada
+
+MODAL DE PAGO:
+- Overlay con blur del fondo
+- Card centrada con sombra dramática
+- Métodos de pago como tarjetas seleccionables con animación de flip
+- Campo de efectivo con cálculo de cambio en tiempo real con animación
+
+═══════════════════════════════════════
+📊 DASHBOARD / MÉTRICAS
+═══════════════════════════════════════
+- KPI cards con número animado (count-up al cargar)
+- Mini sparkline charts integrados en cada KPI
+- Gráfico de ventas del día con área chart y gradiente
+- Mapa de calor de mesas del restaurante (si aplica)
+- Indicadores circulares (donut charts) para categorías más vendidas
+
+═══════════════════════════════════════
+🖥️ DETALLES TÉCNICOS ADICIONALES
+═══════════════════════════════════════
+- CSS custom properties (variables) para theming dinámico
+- Todos los colores con versión --color-name y --color-name-rgb para usar en rgba()
+- Transiciones con cubic-bezier personalizados (no usar linear ni ease genérico)
+  Ejemplo: cubic-bezier(0.34, 1.56, 0.64, 1) para spring effect
+- Scroll personalizado (scrollbar-width: thin con colores del tema)
+- Responsive con breakpoints: 768px tablet, 1024px desktop, 1440px wide
+- Reduced motion media query para accesibilidad (@media prefers-reduced-motion)
+- Z-index system con variables CSS organizadas por capas
+- Focus-visible styles para accesibilidad de teclado
+- Cursor personalizado en áreas interactivas (pointer con escala)
+
+═══════════════════════════════════════
+⚡ PERFORMANCE
+═══════════════════════════════════════
+- Usar transform y opacity para animaciones (GPU accelerated, NO animar height/width)
+- will-change: transform en elementos que se animan frecuentemente
+- Lazy load de imágenes de productos con placeholder blur
+- Debounce en búsqueda de productos
+- Virtualización de listas largas si el menú tiene más de 50 items
+
+Implementa todos estos cambios manteniendo la funcionalidad actual intacta. 
+Empieza por el sistema de diseño base (variables CSS y tokens), 
+luego los componentes de mayor visibilidad (grid de prod

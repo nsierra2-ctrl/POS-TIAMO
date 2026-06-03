@@ -1,0 +1,22 @@
+{
+  "name": "TIAMO BURGER POS",
+  "short_name": "TIAMO POS",
+  "description": "Sistema POS completo para TIAMO BURGER",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#FF2D2D",
+  "background_color": "#070708",
+  "lang": "es",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "categories": ["business", "food", "productivity"],
+  "shortcuts": [
+    { "name": "Mesas", "url": "/", "icons": [{ "src": "/favicon.svg", "sizes": "any" }] },
+    { "name": "Cocina", "url": "/cocina", "icons": [{ "src": "/favicon.svg", "sizes": "any" }] },
+    { "name": "Caja", "url": "/caja", "icons": [{ "src": "/favicon.svg", "sizes": "any" }] }
+  ]
+}

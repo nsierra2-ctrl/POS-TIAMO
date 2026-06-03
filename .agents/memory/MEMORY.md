@@ -1,0 +1,2 @@
+- [Mesa alphanumeric identifiers](mesa-alphanumeric.md) — `numero` and `mesa` fields are `string` (not `integer`) across DB, API, and frontend.
+- [OpenAPI spec precision](openapi-precision.md) — When changing types in `openapi.yaml`, use targeted edits per-schema/parameter, never global find-replace, to avoid corrupting unrelated `integer` fields.

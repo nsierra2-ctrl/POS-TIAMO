@@ -1,0 +1,1558 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 4.0.0
+  description: TIAMO BURGER — API del Sistema POS
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Autenticación y sesión
+  - name: usuarios
+    description: Gestión de usuarios
+  - name: mesas
+    description: Gestión de mesas
+  - name: pedidos
+    description: Gestión de pedidos
+  - name: productos
+    description: Catálogo de productos
+  - name: reportes
+    description: Reportes y estadísticas
+  - name: caja
+    description: Control de caja
+  - name: impresora
+    description: Impresora simulada
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioPublico"
+        "401":
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Cerrar sesión
+      responses:
+        "200":
+          description: Logout exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Obtener usuario autenticado
+      responses:
+        "200":
+          description: Usuario actual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioPublico"
+        "401":
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /usuarios:
+    get:
+      operationId: getUsuarios
+      tags: [usuarios]
+      summary: Listar usuarios (solo admin)
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UsuarioPublico"
+    post:
+      operationId: crearUsuario
+      tags: [usuarios]
+      summary: Crear nuevo usuario (solo admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearUsuarioInput"
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioPublico"
+
+  /usuarios/{id}:
+    put:
+      operationId: actualizarUsuario
+      tags: [usuarios]
+      summary: Actualizar usuario (solo admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarUsuarioInput"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioPublico"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: eliminarUsuario
+      tags: [usuarios]
+      summary: Eliminar usuario (solo admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /mesas:
+    get:
+      operationId: getMesas
+      tags: [mesas]
+      summary: Listar todas las mesas
+      responses:
+        "200":
+          description: Lista de mesas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mesa"
+    post:
+      operationId: crearMesa
+      tags: [mesas]
+      summary: Crear nueva mesa (solo admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearMesaInput"
+      responses:
+        "201":
+          description: Mesa creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mesa"
+
+  /mesas/{numero}:
+    patch:
+      operationId: actualizarMesa
+      tags: [mesas]
+      summary: Actualizar estado de una mesa
+      parameters:
+        - name: numero
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarMesaInput"
+      responses:
+        "200":
+          description: Mesa actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mesa"
+        "404":
+          description: Mesa no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: eliminarMesa
+      tags: [mesas]
+      summary: Eliminar mesa (solo admin)
+      parameters:
+        - name: numero
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mesa eliminada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /productos:
+    get:
+      operationId: getProductos
+      tags: [productos]
+      summary: Listar productos del catálogo
+      parameters:
+        - name: categoria
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: soloDisponibles
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Producto"
+    post:
+      operationId: crearProducto
+      tags: [productos]
+      summary: Crear producto (solo admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearProductoInput"
+      responses:
+        "201":
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Producto"
+
+  /productos/{id}:
+    put:
+      operationId: actualizarProducto
+      tags: [productos]
+      summary: Actualizar producto (solo admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarProductoInput"
+      responses:
+        "200":
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Producto"
+        "404":
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: eliminarProducto
+      tags: [productos]
+      summary: Eliminar producto (solo admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Producto eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /pedidos:
+    get:
+      operationId: getPedidos
+      tags: [pedidos]
+      summary: Listar pedidos
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: mesa
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limite
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista de pedidos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pedido"
+    post:
+      operationId: crearPedido
+      tags: [pedidos]
+      summary: Crear nuevo pedido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearPedidoInput"
+      responses:
+        "201":
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+
+  /pedidos/{id}:
+    get:
+      operationId: getPedido
+      tags: [pedidos]
+      summary: Obtener un pedido por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pedido encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+        "404":
+          description: Pedido no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: actualizarPedido
+      tags: [pedidos]
+      summary: Actualizar estado de un pedido
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarPedidoInput"
+      responses:
+        "200":
+          description: Pedido actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pedido"
+        "404":
+          description: Pedido no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: eliminarPedido
+      tags: [pedidos]
+      summary: Cancelar pedido
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pedido cancelado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /pedidos/{id}/cobrar:
+    post:
+      operationId: cobrarPedido
+      tags: [pedidos]
+      summary: Registrar pago de un pedido
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CobrarPedidoInput"
+      responses:
+        "200":
+          description: Pedido cobrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultadoCobro"
+        "400":
+          description: Error en el pago
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pedidos/resumen:
+    get:
+      operationId: getResumenPedidos
+      tags: [pedidos]
+      summary: Resumen del estado de pedidos
+      responses:
+        "200":
+          description: Resumen de pedidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumenPedidos"
+
+  /reportes/resumen:
+    get:
+      operationId: getResumenGeneral
+      tags: [reportes]
+      summary: Resumen general del día y semana
+      responses:
+        "200":
+          description: Resumen general
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumenGeneral"
+
+  /reportes/ventas-diarias:
+    get:
+      operationId: getVentasDiarias
+      tags: [reportes]
+      summary: Ventas de los últimos 7 días
+      responses:
+        "200":
+          description: Ventas diarias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VentaDiaria"
+
+  /reportes/productos-top:
+    get:
+      operationId: getProductosTop
+      tags: [reportes]
+      summary: Productos más vendidos hoy
+      responses:
+        "200":
+          description: Top productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoTop"
+
+  /reportes/ventas-por-mesero:
+    get:
+      operationId: getVentasPorMesero
+      tags: [reportes]
+      summary: Ventas por mesero hoy
+      responses:
+        "200":
+          description: Ventas por mesero
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VentaMesero"
+
+  /reportes/mesas-stats:
+    get:
+      operationId: getMesasStats
+      tags: [reportes]
+      summary: Estadísticas de mesas hoy
+      responses:
+        "200":
+          description: Estadísticas de mesas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MesasStats"
+
+  /caja/sesion-activa:
+    get:
+      operationId: getCajaSesionActiva
+      tags: [caja]
+      summary: Obtener sesión de caja activa
+      responses:
+        "200":
+          description: Sesión activa o null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CajaSesion"
+
+  /caja/abrir:
+    post:
+      operationId: abrirCaja
+      tags: [caja]
+      summary: Abrir sesión de caja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbrirCajaInput"
+      responses:
+        "201":
+          description: Caja abierta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CajaSesion"
+
+  /caja/cerrar:
+    post:
+      operationId: cerrarCaja
+      tags: [caja]
+      summary: Cerrar sesión de caja con conteo de efectivo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CerrarCajaInput"
+      responses:
+        "200":
+          description: Caja cerrada con resumen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumenCierre"
+
+  /caja/sesiones:
+    get:
+      operationId: getCajaSesiones
+      tags: [caja]
+      summary: Historial de sesiones de caja
+      responses:
+        "200":
+          description: Lista de sesiones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CajaSesion"
+
+  /caja/resumen-dia:
+    get:
+      operationId: getCajaResumenDia
+      tags: [caja]
+      summary: Resumen de efectivo del día
+      responses:
+        "200":
+          description: Resumen del día
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumenDiaCaja"
+
+  /impresora/config:
+    get:
+      operationId: getImpresoraConfig
+      tags: [impresora]
+      summary: Obtener configuración de impresora
+      responses:
+        "200":
+          description: Config actual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImpresoraConfig"
+    post:
+      operationId: setImpresoraConfig
+      tags: [impresora]
+      summary: Actualizar configuración de impresora
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImpresoraConfig"
+      responses:
+        "200":
+          description: Config actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /impresora/imprimir:
+    post:
+      operationId: imprimirTicket
+      tags: [impresora]
+      summary: Imprimir ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImprimirInput"
+      responses:
+        "200":
+          description: Resultado de impresión
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImpresionResultado"
+
+  /impresora/prueba:
+    post:
+      operationId: imprimirPrueba
+      tags: [impresora]
+      summary: Imprimir ticket de prueba
+      responses:
+        "200":
+          description: Resultado de impresión de prueba
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImpresionResultado"
+
+  /impresora/logs:
+    get:
+      operationId: getImpresoraLogs
+      tags: [impresora]
+      summary: Obtener logs de impresión
+      responses:
+        "200":
+          description: Lista de logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImpresionLog"
+    delete:
+      operationId: limpiarImpresoraLogs
+      tags: [impresora]
+      summary: Limpiar logs de impresión
+      responses:
+        "200":
+          description: Logs limpiados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /upload:
+    post:
+      operationId: subirImagen
+      tags: [productos]
+      summary: Subir imagen de producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageData:
+                  type: string
+              required: [imageData]
+      responses:
+        "200":
+          description: URL de la imagen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+
+  /admin/reset:
+    post:
+      operationId: resetDatos
+      tags: [auth]
+      summary: Reiniciar todos los datos
+      responses:
+        "200":
+          description: Datos reiniciados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetResult"
+
+  /promociones:
+    get:
+      operationId: getPromociones
+      tags: [productos]
+      summary: Listar promociones
+      responses:
+        "200":
+          description: Lista de promociones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Promocion"
+    post:
+      operationId: crearPromocion
+      tags: [productos]
+      summary: Crear promoción
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromocionInput"
+      responses:
+        "201":
+          description: Promoción creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promocion"
+
+  /promociones/{id}:
+    put:
+      operationId: actualizarPromocion
+      tags: [productos]
+      summary: Actualizar promoción
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromocionInput"
+      responses:
+        "200":
+          description: Promoción actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promocion"
+    delete:
+      operationId: eliminarPromocion
+      tags: [productos]
+      summary: Eliminar promoción
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eliminada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    RolUsuario:
+      type: string
+      enum: [admin, mesero, cocinero, caja]
+
+    EstadoMesa:
+      type: string
+      enum: [libre, ocupada, proceso]
+
+    EstadoPedido:
+      type: string
+      enum: [nuevo, preparando, listo, cobrado, cancelado]
+
+    MetodoPago:
+      type: string
+      enum: [efectivo, transferencia, mixto, pendiente]
+
+    UsuarioPublico:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        usuario:
+          type: string
+        rol:
+          $ref: "#/components/schemas/RolUsuario"
+        activo:
+          type: boolean
+        creadoEn:
+          type: string
+          format: date-time
+        fotoUrl:
+          type: string
+          nullable: true
+      required: [id, nombre, usuario, rol, activo, creadoEn]
+
+    LoginInput:
+      type: object
+      properties:
+        usuario:
+          type: string
+        contrasena:
+          type: string
+      required: [usuario, contrasena]
+
+    CrearUsuarioInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        usuario:
+          type: string
+        contrasena:
+          type: string
+        rol:
+          $ref: "#/components/schemas/RolUsuario"
+      required: [nombre, usuario, contrasena, rol]
+
+    ActualizarUsuarioInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        contrasena:
+          type: string
+        rol:
+          $ref: "#/components/schemas/RolUsuario"
+        activo:
+          type: boolean
+
+    ItemPedido:
+      type: object
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        emoji:
+          type: string
+        precio:
+          type: integer
+        cantidad:
+          type: integer
+        observaciones:
+          type: string
+      required: [id, nombre, emoji, precio, cantidad]
+
+    Pago:
+      type: object
+      properties:
+        metodo:
+          type: string
+          enum: [efectivo, transferencia]
+        monto:
+          type: integer
+      required: [metodo, monto]
+
+    HistorialEstado:
+      type: object
+      properties:
+        estado:
+          type: string
+        usuarioId:
+          type: integer
+        usuarioNombre:
+          type: string
+        ts:
+          type: string
+        nota:
+          type: string
+      required: [estado, ts]
+
+    Producto:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: integer
+        emoji:
+          type: string
+        imagenUrl:
+          type: string
+        categoria:
+          type: string
+        disponible:
+          type: boolean
+        destacado:
+          type: boolean
+        posicion:
+          type: integer
+        creadoEn:
+          type: string
+          format: date-time
+      required: [id, nombre, precio, emoji, categoria, disponible, destacado, posicion, creadoEn]
+
+    CrearProductoInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: integer
+        emoji:
+          type: string
+        imagenUrl:
+          type: string
+        categoria:
+          type: string
+        disponible:
+          type: boolean
+        destacado:
+          type: boolean
+        posicion:
+          type: integer
+      required: [nombre, precio, categoria]
+
+    ActualizarProductoInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: integer
+        emoji:
+          type: string
+        imagenUrl:
+          type: string
+        categoria:
+          type: string
+        disponible:
+          type: boolean
+        destacado:
+          type: boolean
+        posicion:
+          type: integer
+
+    Mesa:
+      type: object
+      properties:
+        numero:
+          type: string
+        estado:
+          $ref: "#/components/schemas/EstadoMesa"
+        personas:
+          type: integer
+        nombre:
+          type: string
+        zona:
+          type: string
+      required: [numero, estado, personas]
+
+    CrearMesaInput:
+      type: object
+      properties:
+        numero:
+          type: string
+        nombre:
+          type: string
+        zona:
+          type: string
+        capacidad:
+          type: integer
+      required: [numero]
+
+    ActualizarMesaInput:
+      type: object
+      properties:
+        estado:
+          $ref: "#/components/schemas/EstadoMesa"
+        personas:
+          type: integer
+        nombre:
+          type: string
+        zona:
+          type: string
+
+    Pedido:
+      type: object
+      properties:
+        id:
+          type: integer
+        mesa:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPedido"
+        estado:
+          $ref: "#/components/schemas/EstadoPedido"
+        total:
+          type: integer
+        notas:
+          type: string
+        meseroId:
+          type: integer
+        metodoPago:
+          $ref: "#/components/schemas/MetodoPago"
+        pagos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pago"
+        propina:
+          type: integer
+        cobradoEn:
+          type: string
+          format: date-time
+        cobradoPor:
+          type: integer
+        historialEstados:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistorialEstado"
+        creadoEn:
+          type: string
+          format: date-time
+        comandaTicket:
+          type: string
+          description: Texto formateado de la comanda de cocina (solo al crear pedido)
+        impresion:
+          $ref: "#/components/schemas/ImpresionResultado"
+      required: [id, mesa, items, estado, total, creadoEn, metodoPago, propina]
+
+    CrearPedidoInput:
+      type: object
+      properties:
+        mesa:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPedido"
+        total:
+          type: integer
+        notas:
+          type: string
+        meseroId:
+          type: integer
+      required: [mesa, items, total]
+
+    ActualizarPedidoInput:
+      type: object
+      properties:
+        estado:
+          $ref: "#/components/schemas/EstadoPedido"
+        notas:
+          type: string
+        nota:
+          type: string
+
+    CobrarPedidoInput:
+      type: object
+      properties:
+        pagos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pago"
+        propina:
+          type: integer
+        nota:
+          type: string
+      required: [pagos]
+
+    ResultadoCobro:
+      type: object
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        metodoPago:
+          type: string
+        pagos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pago"
+        propina:
+          type: integer
+        cambio:
+          type: integer
+        cobradoEn:
+          type: string
+        facturaTicket:
+          type: string
+          description: Texto formateado de la factura para impresion
+        impresion:
+          $ref: "#/components/schemas/ImpresionResultado"
+      required: [id, estado, cambio]
+
+    ResumenPedidos:
+      type: object
+      properties:
+        nuevo:
+          type: integer
+        preparando:
+          type: integer
+        listo:
+          type: integer
+        totalHoy:
+          type: integer
+        ventasHoy:
+          type: integer
+      required: [nuevo, preparando, listo, totalHoy, ventasHoy]
+
+    ResumenGeneral:
+      type: object
+      properties:
+        ventasHoy:
+          type: integer
+        pedidosHoy:
+          type: integer
+        mesasOcupadas:
+          type: integer
+        promedioTicket:
+          type: integer
+        ventasSemana:
+          type: integer
+        pedidosSemana:
+          type: integer
+        crecimientoSemana:
+          type: number
+        tiempoPromedioMin:
+          type: integer
+        efectivoHoy:
+          type: integer
+        transferenciaHoy:
+          type: integer
+        propinasHoy:
+          type: integer
+      required: [ventasHoy, pedidosHoy, mesasOcupadas, promedioTicket, ventasSemana, pedidosSemana, crecimientoSemana, tiempoPromedioMin, efectivoHoy, transferenciaHoy, propinasHoy]
+
+    VentaDiaria:
+      type: object
+      properties:
+        fecha:
+          type: string
+        ventas:
+          type: integer
+        pedidos:
+          type: integer
+        efectivo:
+          type: integer
+        transferencia:
+          type: integer
+      required: [fecha, ventas, pedidos, efectivo, transferencia]
+
+    ProductoTop:
+      type: object
+      properties:
+        nombre:
+          type: string
+        emoji:
+          type: string
+        cantidad:
+          type: integer
+        total:
+          type: integer
+      required: [nombre, emoji, cantidad, total]
+
+    VentaMesero:
+      type: object
+      properties:
+        nombre:
+          type: string
+        pedidos:
+          type: integer
+        ventas:
+          type: integer
+        propinas:
+          type: integer
+      required: [nombre, pedidos, ventas, propinas]
+
+    MesasStats:
+      type: object
+      properties:
+        totalRotaciones:
+          type: integer
+        mesaMasActiva:
+          type: integer
+        tiempoPromedioMesa:
+          type: integer
+      required: [totalRotaciones, mesaMasActiva, tiempoPromedioMesa]
+
+    CajaSesion:
+      type: object
+      properties:
+        id:
+          type: integer
+        usuarioId:
+          type: integer
+        usuarioNombre:
+          type: string
+        aperturaEn:
+          type: string
+          format: date-time
+        cierreEn:
+          type: string
+          format: date-time
+        montoInicial:
+          type: integer
+        totalEfectivo:
+          type: integer
+        totalTransferencia:
+          type: integer
+        totalPropinas:
+          type: integer
+        diferencia:
+          type: integer
+        estado:
+          type: string
+          enum: [abierta, cerrada]
+        notas:
+          type: string
+      required: [id, usuarioId, usuarioNombre, aperturaEn, montoInicial, totalEfectivo, totalTransferencia, totalPropinas, diferencia, estado]
+
+    AbrirCajaInput:
+      type: object
+      properties:
+        montoInicial:
+          type: integer
+        notas:
+          type: string
+      required: [montoInicial]
+
+    CerrarCajaInput:
+      type: object
+      properties:
+        efectivoContado:
+          type: integer
+        notas:
+          type: string
+      required: [efectivoContado]
+
+    ResumenCierre:
+      type: object
+      properties:
+        id:
+          type: integer
+        totalEfectivo:
+          type: integer
+        totalTransferencia:
+          type: integer
+        totalPropinas:
+          type: integer
+        diferencia:
+          type: integer
+        pedidosCobrados:
+          type: integer
+        efectivoEsperado:
+          type: integer
+        efectivoContado:
+          type: integer
+        estado:
+          type: string
+      required: [id, totalEfectivo, totalTransferencia, totalPropinas, diferencia, pedidosCobrados, efectivoEsperado, efectivoContado, estado]
+
+    ResumenDiaCaja:
+      type: object
+      properties:
+        totalVentas:
+          type: integer
+        totalEfectivo:
+          type: integer
+        totalTransferencia:
+          type: integer
+        totalPropinas:
+          type: integer
+        pedidosCobrados:
+          type: integer
+        total:
+          type: integer
+      required: [totalVentas, totalEfectivo, totalTransferencia, totalPropinas, pedidosCobrados, total]
+
+    ImpresoraConfig:
+      type: object
+      properties:
+        modo:
+          type: string
+          enum: [simulado, usb, wifi, ethernet, bluetooth]
+        ip:
+          type: string
+        puerto:
+          type: integer
+        ssid:
+          type: string
+        bluetoothName:
+          type: string
+      required: [modo]
+
+    ImprimirInput:
+      type: object
+      properties:
+        ticket:
+          type: string
+        tipo:
+          type: string
+      required: [ticket]
+
+    ImpresionResultado:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        modo:
+          type: string
+        mensaje:
+          type: string
+        ticket:
+          type: string
+        error:
+          type: string
+      required: [ok]
+
+    ImpresionLog:
+      type: object
+      properties:
+        ts:
+          type: string
+        tipo:
+          type: string
+        contenido:
+          type: string
+        exito:
+          type: boolean
+      required: [ts, tipo, contenido, exito]
+
+    Promocion:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        tipo:
+          type: string
+          enum: [descuento, combo, 2x1, happy_hour]
+        descuento:
+          type: integer
+        tipoDescuento:
+          type: string
+          enum: [porcentaje, fijo]
+        activo:
+          type: boolean
+        diasSemana:
+          type: string
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        imagenUrl:
+          type: string
+        creadoEn:
+          type: string
+          format: date-time
+      required: [id, nombre, tipo, tipoDescuento, activo, creadoEn]
+
+    PromocionInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        tipo:
+          type: string
+          enum: [descuento, combo, 2x1, happy_hour]
+        descuento:
+          type: integer
+        tipoDescuento:
+          type: string
+          enum: [porcentaje, fijo]
+        activo:
+          type: boolean
+        diasSemana:
+          type: string
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        imagenUrl:
+          type: string
+      required: [nombre]
+
+    UploadResult:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+
+    ResetResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        mensaje:
+          type: string
+      required: [ok, mensaje]

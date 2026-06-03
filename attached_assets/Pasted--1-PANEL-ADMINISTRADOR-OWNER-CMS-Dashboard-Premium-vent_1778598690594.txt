@@ -1,0 +1,426 @@
+🧑‍💼 1. PANEL ADMINISTRADOR (OWNER CMS)
+
+Dashboard Premium
+
+* ventas en tiempo real
+* mesas activas
+* pedidos activos
+* cocina en vivo
+* ingresos diarios
+* ticket promedio
+* productos top
+* gráficas animadas
+* horas pico
+* alertas importantes
+
+Gestión Restaurante
+
+* editar información negocio
+* logo
+* colores
+* temas visuales
+* dark mode
+* Apple mode UI
+
+Gestión Usuarios
+
+* crear usuarios
+* roles
+* permisos
+* actividad empleados
+* bloquear accesos
+
+Auditoría
+
+* quién hizo descuentos
+* quién borró pedidos
+* quién cambió precios
+* IP y hora
+* logs completos
+
+⸻
+
+🍔 2. GESTIÓN MENÚ (CMS)
+
+Productos
+
+* crear productos
+* editar productos
+* eliminar productos
+* activar/desactivar
+* subir imágenes
+* categorías
+* variantes
+* extras
+* modifiers
+* ingredientes
+
+Promociones
+
+* combos
+* 2x1
+* happy hour
+* descuentos automáticos
+* promociones temporales
+
+Inventario
+
+* stock automático
+* descuento ingredientes
+* alertas bajo stock
+* proveedores
+* compras
+
+⸻
+
+🧾 3. CAJA
+
+Funciones
+
+* cobrar pedidos
+* dividir cuentas
+* múltiples pagos
+* efectivo
+* tarjeta
+* QR
+* transferencia
+
+Propinas
+
+* sugeridas
+* personalizadas
+* configurables
+
+Facturación
+
+* generar PDF
+* guardar factura
+* reimprimir
+* historial
+
+Caja
+
+* apertura caja
+* cierre caja
+* arqueo
+* historial cierres
+
+⸻
+
+👨‍🍳 4. MESEROS
+
+Flujo Ultra Rápido
+
+1. Seleccionar mesa
+2. Número personas
+3. Agregar productos
+4. Observaciones
+5. Enviar pedido
+
+Funciones
+
+* búsqueda rápida
+* favoritos
+* combos
+* modifiers
+* notas cocina
+* reordenar productos
+
+UX
+
+* botones grandes
+* táctil
+* iPad optimized
+* swipe gestures
+* animaciones premium
+
+⸻
+
+🔥 5. COCINA (KDS)
+
+Kitchen Display System
+
+* pedidos en vivo
+* prioridad colores
+* cronómetros
+* alertas sonido
+* estados pedidos
+
+Estados
+
+* recibido
+* preparando
+* listo
+* entregado
+
+Estaciones
+
+* cocina
+* bebidas
+* postres
+* parrilla
+
+⸻
+
+🖨️ 6. IMPRESIÓN INTELIGENTE
+
+Compatible
+
+* ESC/POS
+* USB
+* Ethernet
+* WiFi
+
+Funciones
+
+* impresión automática
+* silenciosa
+* comandas automáticas
+* separación por estaciones
+
+CMS Impresoras
+
+* IP
+* puerto
+* tipo conexión
+* pruebas impresión
+* logs impresión
+
+Inteligencia
+
+* bebidas → impresora bar
+* comida → cocina
+* postres → postres
+
+⸻
+
+📲 7. SISTEMA QR
+
+QR por mesa
+
+Clientes pueden:
+
+* ver menú
+* llamar mesero
+* pedir cuenta
+* ordenar
+* pagar futuro
+* dejar propina
+
+Administrador
+
+* personalizar QR
+* descargar QR
+* logo restaurante
+* activar/desactivar
+
+⸻
+
+💳 8. DIVISIÓN INTELIGENTE DE CUENTAS
+
+Permite
+
+* dividir por personas
+* dividir productos
+* dividir porcentaje
+* pagos parciales
+
+UX
+
+* drag & drop
+* cálculo automático
+* visual premium
+
+⸻
+
+📊 9. ANALYTICS PREMIUM
+
+Métricas
+
+* ventas por hora
+* productos top
+* productos lentos
+* rendimiento meseros
+* ganancias netas
+* flujo mesas
+* tiempos cocina
+
+Dashboard
+
+* animado
+* realtime
+* moderno
+* cinematográfico
+
+⸻
+
+🧠 10. IA OPERATIVA
+
+IA analiza
+
+* ventas
+* horarios
+* productos
+* stock
+
+Recomienda
+
+* promociones
+* compras
+* alertas
+* tendencias
+
+⸻
+
+🛎️ 11. NOTIFICACIONES
+
+Realtime
+
+* nueva orden
+* cocina lista
+* stock bajo
+* impresora desconectada
+* cierre caja
+
+⸻
+
+🪑 12. MAPA VISUAL RESTAURANTE
+
+Funciones
+
+* mover mesas
+* unir mesas
+* zonas
+* estados colores
+
+Estados
+
+* libre
+* ocupada
+* esperando
+* lista cobrar
+* reservada
+
+⸻
+
+📅 13. RESERVAS
+
+Funciones
+
+* reservar mesa
+* calendario
+* clientes
+* confirmaciones
+
+⸻
+
+🚚 14. DELIVERY
+
+Soporte
+
+* domicilios
+* repartidores
+* estado pedidos
+* dirección cliente
+
+⸻
+
+🔐 15. SEGURIDAD
+
+Seguridad Enterprise
+
+* JWT
+* RBAC
+* rate limiting
+* logs
+* validaciones backend
+* session timeout
+
+⸻
+
+📁 16. FACTURAS PDF
+
+Incluir
+
+* logo
+* QR
+* propina
+* impuestos
+* productos
+* fecha
+* hora
+* mesero
+
+⸻
+
+🌐 17. REALTIME ENGINE
+
+Todo live
+
+* cocina
+* dashboard
+* caja
+* mesas
+* pedidos
+
+Con:
+
+* Socket.IO
+* WebSockets
+
+⸻
+
+📱 18. PWA / TABLETS
+
+Compatible
+
+* iPad
+* Android tablet
+* celular
+
+Funciones
+
+* instalar como app
+* offline parcial
+* touch optimizado
+
+⸻
+
+🎨 19. UX/UI PREMIUM
+
+Inspiración
+
+* Apple
+* Stripe
+* Tesla
+* Square POS
+
+Efectos
+
+* glassmorphism
+* glow
+* blur
+* microinteracciones
+* animaciones fluidas
+
+⸻
+
+☁️ 20. SaaS READY
+
+Preparado para:
+
+* múltiples restaurantes
+* múltiples sucursales
+* panel global
+* pagos suscripción
+
+⸻
+
+⚡ 21. PERFORMANCE
+
+Optimización
+
+* lazy loading
+* optimistic updates
+* cache inteligente
+* realtime streamin

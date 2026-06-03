@@ -1,0 +1,55 @@
+uploads = []
+
+[[generated]]
+id = "4lHGLauFTyEFJsBwMthx6"
+uri = "file://artifacts/ventura-pos/public/images/burger.png"
+type = "image"
+title = "Burger photo"
+
+[[generated]]
+id = "x6AwdiYikJQIDswqM1OvK"
+uri = "file://artifacts/ventura-pos/public/images/perro.png"
+type = "image"
+title = "Hot dog photo"
+
+[[generated]]
+id = "Kty4SFKC2PZGdNDsk-wm2"
+uri = "file://artifacts/ventura-pos/public/images/papas.png"
+type = "image"
+title = "Loaded fries"
+
+[[generated]]
+id = "WbF0_3XLnZ-cvtDZXgZqo"
+uri = "file://artifacts/ventura-pos/public/images/pizza.png"
+type = "image"
+title = "Pizza photo"
+
+[[generated]]
+id = "kayP1SzZZ4vOt02EgARaH"
+uri = "file://artifacts/ventura-pos/public/images/panzerotti.png"
+type = "image"
+title = "Panzerotti photo"
+
+[[generated]]
+id = "kp9QPzGNjrcJI3A0xZT-8"
+uri = "file://artifacts/ventura-pos/public/images/bebidas.png"
+type = "image"
+title = "Drinks photo"
+
+[[generated]]
+id = "MnZR0XV3EXL3elYvJDdtL"
+uri = "file://artifacts/ventura-pos/public/images/granizada.png"
+type = "image"
+title = "Granizada drink"
+
+[[generated]]
+id = "iSLjWVda0bAY0NNldwKIe"
+uri = "file://artifacts/ventura-pos/public/images/adicionales.png"
+type = "image"
+title = "Food toppings"
+
+[[outputs]]
+id = "caU-FzVeYzzuJRq6TQXNn"
+uri = "file://ventura-os.tar.gz"
+type = "unspecified"
+title = "VENTURA OS — Proyecto Completo"

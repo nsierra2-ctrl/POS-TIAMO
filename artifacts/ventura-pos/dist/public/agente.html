@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIAMO POS - Agente de Impresion Local</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 32px; max-width: 480px; width: 100%; }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; text-align: center; }
+  h1 span { color: #FF2D2D; }
+  .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 24px; }
+  .status { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+  .status.ok { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); }
+  .status.warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+  .status.err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
+  .status .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status.ok .dot { background: #10b981; }
+  .status.warn .dot { background: #f59e0b; animation: pulse 1.5s infinite; }
+  .status.err .dot { background: #ef4444; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .config { display: grid; gap: 12px; margin-bottom: 20px; }
+  .config label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+  .config input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px; }
+  .config input:focus { outline: none; border-color: #FF2D2D; }
+  .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .btn-primary { background: linear-gradient(135deg,#FF2D2D,#CC0000); color: #fff; }
+  .btn-primary:hover { opacity: .9; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #ccc; margin-top: 10px; }
+  .log { margin-top: 20px; max-height: 240px; overflow-y: auto; font-family: 'Courier New',monospace; font-size: 11px; line-height: 1.5; }
+  .log .entry { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); color: #aaa; }
+  .log .entry.ok { color: #10b981; }
+  .log .entry.err { color: #ef4444; }
+  .log .entry.warn { color: #f59e0b; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat { text-align: center; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+  .stat .num { font-size: 22px; font-weight: 800; color: #fff; }
+  .stat .lbl { font-size: 10px; color: #888; margin-top: 2px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>TIAMO <span>POS</span></h1>
+  <p class="subtitle">Agente de Impresion Local</p>
+
+  <div id="status" class="status warn">
+    <div class="dot"></div>
+    <span id="statusText">Desconectado del servidor</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="statPend">0</div><div class="lbl">Pendientes</div></div>
+    <div class="stat"><div class="num" id="statImp">0</div><div class="lbl">Impresos</div></div>
+    <div class="stat"><div class="num" id="statErr">0</div><div class="lbl">Errores</div></div>
+  </div>
+
+  <div class="config">
+    <label>URL del Servidor TIAMO POS</label>
+    <input id="serverUrl" type="text" value="" placeholder="https://tu-app.replit.app">
+    <label>IP de la Impresora (JAL-P56)</label>
+    <input id="printerIp" type="text" value="192.168.1.100" placeholder="192.168.1.100">
+    <label>Puerto</label>
+    <input id="printerPort" type="text" value="9100" placeholder="9100">
+  </div>
+
+  <button id="btnToggle" class="btn btn-primary" onclick="toggleAgent()">Iniciar Agente</button>
+  <button class="btn btn-outline" onclick="clearLog()">Limpiar Log</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const AGENTE_ID = 'agente_' + Math.random().toString(36).slice(2, 8);
+let running = false;
+let intervalId = null;
+let printedCount = 0;
+let errorCount = 0;
+
+function log(msg, type = 'info') {
+  const el = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = 'entry ' + type;
+  const ts = new Date().toLocaleTimeString('es-CO', {hour12:false});
+  entry.textContent = `[${ts}] ${msg}`;
+  el.prepend(entry);
+  if (el.children.length > 50) el.lastChild.remove();
+}
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+function setStatus(type, text) {
+  const s = document.getElementById('status');
+  s.className = 'status ' + type;
+  document.getElementById('statusText').textContent = text;
+}
+
+function updateStats(pend) {
+  document.getElementById('statPend').textContent = pend;
+  document.getElementById('statImp').textContent = printedCount;
+  document.getElementById('statErr').textContent = errorCount;
+}
+
+/* ===== ESC/POS Builder ===== */
+function escpos(ticketTexto) {
+  const ESC = 0x1b, GS = 0x1d, LF = 0x0a;
+  const parts = [ESC, 0x40, ESC, 0x74, 0x10];
+  for (const line of ticketTexto.split('\n')) {
+    const t = line.trim();
+    if (!t) { parts.push(LF); continue; }
+    const centered = t.startsWith('TIAMO') || t.startsWith('COMANDA') || t.startsWith('FACTURA') || t.startsWith('TICKET') || t.startsWith('Gracias') || t.startsWith('www.');
+    const divider = t.startsWith('===');
+    if (centered || divider) {
+      parts.push(ESC, 0x61, 0x01);
+      for (let i=0;i<t.length;i++) parts.push(latin1(t.charCodeAt(i)));
+      parts.push(LF, ESC, 0x61, 0x00);
+    } else {
+      for (let i=0;i<t.length;i++) parts.push(latin1(t.charCodeAt(i)));
+      parts.push(LF);
+    }
+  }
+  parts.push(ESC, 0x64, 0x04, GS, 0x56, 0x01);
+  return new Uint8Array(parts);
+}
+function latin1(c) {
+  if (c < 128) return c;
+  if (c === 0xf1) return 0xf1; if (c === 0xd1) return 0xd1;
+  if (c === 0xe1) return 0xe1; if (c === 0xe9) return 0xe9;
+  if (c === 0xed) return 0xed; if (c === 0xf3) return 0xf3;
+  if (c === 0xfa) return 0xfa; if (c === 0xc1) return 0xc1;
+  if (c === 0xc9) return 0xc9; if (c === 0xcd) return 0xcd;
+  if (c === 0xd3) return 0xd3; if (c === 0xda) return 0xda;
+  if (c === 0xa1) return 0xa1; if (c === 0xbf) return 0xbf;
+  if (c >= 0x80 && c <= 0xff) return c;
+  return 0x3f;
+}
+
+/* ===== TCP Print via WebSocket bridge (requires bridge.js) ===== */
+async function printToPrinter(ip, port, text) {
+  // Try bridge.js first (localhost:3001)
+  try {
+    const res = await fetch('http://localhost:3001/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: text, mode: 'escpos', ip, port }),
+    });
+    const data = await res.json();
+    if (data.ok) return { ok: true, via: 'bridge' };
+  } catch (e) {}
+
+  // Fallback: WebUSB
+  if ('usb' in navigator) {
+    try {
+      const dev = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+      await dev.open();
+      if (dev.configuration === null) await dev.selectConfiguration(1);
+      let ifaceNum = 0, epNum = 1;
+      for (const iface of dev.configuration?.interfaces ?? []) {
+        for (const ep of iface.alternate.endpoints) {
+          if (ep.direction === 'out') { ifaceNum = iface.interfaceNumber; epNum = ep.endpointNumber; break; }
+        }
+      }
+      await dev.claimInterface(ifaceNum);
+      const bytes = escpos(text);
+      await dev.transferOut(epNum, bytes);
+      try { await dev.close(); } catch {}
+      return { ok: true, via: 'usb' };
+    } catch (e) {}
+  }
+
+  return { ok: false, error: 'No bridge.js (localhost:3001) ni WebUSB disponible. Instale bridge.js en esta PC.' };
+}
+
+/* ===== Server Polling ===== */
+async function poll() {
+  const server = document.getElementById('serverUrl').value.trim();
+  if (!server) { setStatus('err', 'Falta URL del servidor'); return; }
+
+  try {
+    // Ping
+    await fetch(`${server}/api/impresora/agente/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: AGENTE_ID, nombre: 'PC Caja TIAMO' }),
+    });
+
+    // Get pending tickets
+    const res = await fetch(`${server}/api/impresora/cola`);
+    const data = await res.json();
+
+    if (data.ok && data.pendientes?.length > 0) {
+      updateStats(data.totalPendientes);
+      setStatus('ok', `Conectado - ${data.totalPendientes} pendiente(s)`);
+
+      const ip = document.getElementById('printerIp').value.trim() || '192.168.1.100';
+      const port = parseInt(document.getElementById('printerPort').value) || 9100;
+
+      for (const ticket of data.pendientes) {
+        log(`Imprimiendo ticket ${ticket.id.slice(0,8)}... (${ticket.tipo})`, 'warn');
+        const result = await printToPrinter(ip, port, ticket.texto);
+        if (result.ok) {
+          // Mark as printed
+          await fetch(`${server}/api/impresora/cola/${ticket.id}/impreso`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agenteId: AGENTE_ID }),
+          });
+          printedCount++;
+          log(`Ticket ${ticket.id.slice(0,8)} impreso via ${result.via}`, 'ok');
+        } else {
+          errorCount++;
+          log(`Error: ${result.error}`, 'err');
+          setStatus('warn', 'Error de impresion - verifique bridge.js o WebUSB');
+          break; // Stop on error
+        }
+      }
+    } else {
+      updateStats(data.totalPendientes || 0);
+      setStatus('ok', 'Conectado - Sin tickets pendientes');
+    }
+  } catch (e) {
+    setStatus('err', 'No se pudo conectar al servidor: ' + (e.message || e));
+    log('Error de conexion: ' + (e.message || e), 'err');
+  }
+}
+
+function toggleAgent() {
+  running = !running;
+  const btn = document.getElementById('btnToggle');
+  if (running) {
+    btn.textContent = 'Detener Agente';
+    log('Agente iniciado - ID: ' + AGENTE_ID);
+    poll(); // first poll immediately
+    intervalId = setInterval(poll, 3000);
+  } else {
+    btn.textContent = 'Iniciar Agente';
+    clearInterval(intervalId);
+    setStatus('warn', 'Agente detenido');
+    log('Agente detenido');
+  }
+}
+
+// Auto-detect server URL from referrer
+window.onload = () => {
+  const ref = document.referrer || window.location.origin;
+  if (ref && ref !== 'null') {
+    document.getElementById('serverUrl').value = ref.replace(/\/$/, '');
+  }
+};
+</script>
+</body>
+</html>
