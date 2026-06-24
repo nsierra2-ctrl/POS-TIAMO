@@ -12,7 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { CobrarModal } from "@/components/cobrar-modal";
 import { formatPrice } from "@/lib/constants";
-import { Minus, Plus, Users, ShoppingCart, Banknote, UtensilsCrossed, Clock, CheckCircle2, ChefHat, LayoutGrid, Search, TrendingUp } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { Minus, Plus, Users, ShoppingCart, Banknote, UtensilsCrossed, Clock, CheckCircle2, ChefHat, LayoutGrid, Search, TrendingUp, DoorOpen, Receipt, Printer } from "lucide-react";
 
 function useTimer(startedAt?: string | null) {
   const [elapsed, setElapsed] = useState(0);
@@ -58,18 +60,44 @@ const ESTADO_CONFIG = {
     icon: Users,
     headerColor: "from-amber-950/30",
   },
-  proceso: {
-    border: "rgba(255,45,45,0.3)",
-    borderHover: "rgba(255,45,45,0.6)",
-    glow: "rgba(255,45,45,0.08)",
-    glowHover: "rgba(255,45,45,0.2)",
-    glowPulse: "0 0 0 1px rgba(255,45,45,0.18)",
-    dot: "#FF2D2D",
-    label: "COCINANDO",
-    labelBg: "rgba(255,45,45,0.09)",
-    labelColor: "#FF2D2D",
-    icon: ChefHat,
-    headerColor: "from-red-950/30",
+  lista_cobro: {
+    border: "rgba(168,85,247,0.35)",
+    borderHover: "rgba(168,85,247,0.65)",
+    glow: "rgba(168,85,247,0.09)",
+    glowHover: "rgba(168,85,247,0.22)",
+    glowPulse: "0 0 0 1px rgba(168,85,247,0.2)",
+    dot: "#a855f7",
+    label: "LISTA COBRO",
+    labelBg: "rgba(168,85,247,0.1)",
+    labelColor: "#c084fd",
+    icon: Receipt,
+    headerColor: "from-purple-950/30",
+  },
+  en_pago: {
+    border: "rgba(99,102,241,0.35)",
+    borderHover: "rgba(99,102,241,0.65)",
+    glow: "rgba(99,102,241,0.09)",
+    glowHover: "rgba(99,102,241,0.22)",
+    glowPulse: "0 0 0 1px rgba(99,102,241,0.2)",
+    dot: "#6366f1",
+    label: "EN PAGO",
+    labelBg: "rgba(99,102,241,0.1)",
+    labelColor: "#818cf8",
+    icon: Banknote,
+    headerColor: "from-indigo-950/30",
+  },
+  finalizada: {
+    border: "rgba(99,102,241,0.2)",
+    borderHover: "rgba(99,102,241,0.5)",
+    glow: "rgba(99,102,241,0.05)",
+    glowHover: "rgba(99,102,241,0.15)",
+    glowPulse: "0 0 0 1px rgba(99,102,241,0.1)",
+    dot: "#4f46e5",
+    label: "FINALIZADA",
+    labelBg: "rgba(99,102,241,0.08)",
+    labelColor: "#6366f1",
+    icon: DoorOpen,
+    headerColor: "from-indigo-950/20",
   },
 };
 
@@ -77,9 +105,11 @@ function MesaCard({ mesa, pedido, onClick, index }: { mesa: any; pedido: any; on
   const cfg = ESTADO_CONFIG[mesa.estado as keyof typeof ESTADO_CONFIG] ?? ESTADO_CONFIG.libre;
   const Icon = cfg.icon;
   const timer = useTimer(pedido?.creadoEn);
-  const isOcupada = mesa.estado !== "libre";
+  const isOcupada = mesa.estado !== "libre" && mesa.estado !== "finalizada";
   const urgente = pedido && timer && parseInt(timer) > 30;
-  const isCocinando = mesa.estado === "proceso";
+  const isCocinando = mesa.estado === "en_pago";
+  const isListaCobro = mesa.estado === "lista_cobro";
+  const isFinalizada = mesa.estado === "finalizada";
   const ref = useRef<HTMLButtonElement>(null);
 
   return (
@@ -253,37 +283,68 @@ function MesaCard({ mesa, pedido, onClick, index }: { mesa: any; pedido: any; on
 
 export default function MeseroPage() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: mesas, isLoading } = useGetMesas({
     query: { queryKey: getGetMesasQueryKey(), refetchInterval: 4000 },
   });
   const { data: pedidos } = useGetPedidos(
-    { estado: "nuevo,preparando,listo" },
-    { query: { queryKey: getGetPedidosQueryKey({ estado: "nuevo,preparando,listo" }), refetchInterval: 6000 } }
+    { estado: "nuevo,preparando,listo,cobrado" },
+    { query: { queryKey: getGetPedidosQueryKey({ estado: "nuevo,preparando,listo,cobrado" }), refetchInterval: 6000 } }
   );
 
   const [selectedMesaNum, setSelectedMesaNum] = useState<string | null>(null);
   const [personasCount, setPersonasCount] = useState(2);
   const [mesaAcciones, setMesaAcciones] = useState<{ numero: string; estado: string; personas: number } | null>(null);
   const [cobrarPedido, setCobrarPedido] = useState<{ id: number; mesa: string; total: number; items?: any[] } | null>(null);
-  const [filtro, setFiltro] = useState<"todas" | "libre" | "ocupada" | "proceso">("todas");
+  const [filtro, setFiltro] = useState<"todas" | "libre" | "ocupada" | "lista_cobro" | "en_pago">("todas");
+  const [liberandoMesa, setLiberandoMesa] = useState(false);
+  const [solicitandoCuenta, setSolicitandoCuenta] = useState(false);
 
   const libres = mesas?.filter((m) => m.estado === "libre").length ?? 0;
   const ocupadas = mesas?.filter((m) => m.estado === "ocupada").length ?? 0;
-  const proceso = mesas?.filter((m) => m.estado === "proceso").length ?? 0;
+  const listaCobro = mesas?.filter((m) => m.estado === "lista_cobro").length ?? 0;
+  const enPago = mesas?.filter((m) => m.estado === "en_pago").length ?? 0;
   const total = mesas?.length ?? 0;
 
-  const pedidoParaMesa = (n: string) => pedidos?.find((p) => p.mesa === n) ?? null;
+  const pedidoActivoParaMesa = (n: string) => pedidos?.find((p) => p.mesa === n && p.estado !== "cobrado") ?? null;
+  const pedidoCobradoParaMesa = (n: string) => pedidos?.find((p) => p.mesa === n && p.estado === "cobrado") ?? null;
+  const pedidoParaMesa = (n: string) => pedidos?.find((p) => p.mesa === n && p.estado !== "cobrado") ?? null;
 
   const mesasFiltradas = mesas?.filter((m) =>
     filtro === "todas" ? true : m.estado === filtro
   );
 
   const handleMesaClick = (mesa: any) => {
-    if (mesa.estado === "libre") {
+    if (mesa.estado === "libre" || mesa.estado === "finalizada") {
       setPersonasCount(2);
       setSelectedMesaNum(mesa.numero);
     } else {
       setMesaAcciones({ numero: mesa.numero, estado: mesa.estado, personas: mesa.personas ?? 1 });
+    }
+  };
+
+  const handleSolicitarCuenta = async (mesaNum: string) => {
+    setSolicitandoCuenta(true);
+    try {
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const r = await fetch(`${base}/api/mesas/${encodeURIComponent(mesaNum)}/solicitar-cuenta`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error((err as any).error ?? "Error al solicitar cuenta");
+      }
+      queryClient.invalidateQueries({ queryKey: getGetMesasQueryKey() });
+      setMesaAcciones(null);
+      toast({ title: "Cuenta solicitada", description: `Mesa ${mesaNum} lista para cobro` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message ?? "No se pudo solicitar la cuenta", variant: "destructive" });
+    } finally {
+      setSolicitandoCuenta(false);
     }
   };
 
@@ -327,14 +388,42 @@ export default function MeseroPage() {
     });
   };
 
+  const handleCerrarMesa = async (mesaNum: string, propina: number) => {
+    setLiberandoMesa(true);
+    try {
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const r = await fetch(`${base}/api/mesas/${encodeURIComponent(mesaNum)}/cerrar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(propina > 0 ? { propina } : {}),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error((err as any).error ?? "Error al cerrar mesa");
+      }
+      queryClient.invalidateQueries({ queryKey: getGetMesasQueryKey() });
+      setMesaAcciones(null);
+      toast({
+        title: `Mesa ${mesaNum} cerrada`,
+        description: propina > 0 ? `Propina de ${formatPrice(propina)} registrada` : "La mesa quedó libre",
+      });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message ?? "No se pudo cerrar la mesa", variant: "destructive" });
+    } finally {
+      setLiberandoMesa(false);
+    }
+  };
+
   const FILTROS = [
     { key: "todas", label: "Todas", count: total, color: "rgba(255,255,255,0.7)" },
     { key: "libre", label: "Libres", count: libres, color: "#22c55e" },
     { key: "ocupada", label: "Ocupadas", count: ocupadas, color: "#f59e0b" },
-    { key: "proceso", label: "Cocinando", count: proceso, color: "#FF2D2D" },
+    { key: "lista_cobro", label: "Lista Cobro", count: listaCobro, color: "#a855f7" },
+    { key: "en_pago", label: "En Pago", count: enPago, color: "#6366f1" },
   ] as const;
 
-  const ocupacionPct = total ? Math.round(((ocupadas + proceso) / total) * 100) : 0;
+  const ocupacionPct = total ? Math.round(((ocupadas + listaCobro + enPago) / total) * 100) : 0;
 
   return (
     <div className="relative flex flex-col min-h-[100dvh] text-white pb-20 md:pb-0">
@@ -359,7 +448,7 @@ export default function MeseroPage() {
                 {total} mesas ·{" "}
                 <span className="text-emerald-500 font-semibold">{libres} libres</span>
                 {" · "}
-                <span className="text-amber-500 font-semibold">{ocupadas + proceso} ocupadas</span>
+                <span className="text-amber-500 font-semibold">{ocupadas + listaCobro + enPago} ocupadas</span>
               </p>
             </div>
 
@@ -501,7 +590,7 @@ export default function MeseroPage() {
         </Dialog>
 
         {/* Acciones dialog */}
-        <Dialog open={mesaAcciones !== null} onOpenChange={(open) => !open && setMesaAcciones(null)}>
+        <Dialog open={mesaAcciones !== null} onOpenChange={(open) => { if (!open) setMesaAcciones(null); }}>
           <DialogContent className="sm:max-w-sm glass-modal border-white/8 text-white p-0 overflow-hidden rounded-3xl">
             <div className="px-6 pt-6 pb-0">
               <div className="flex items-center gap-3 mb-1">
@@ -525,28 +614,98 @@ export default function MeseroPage() {
               </div>
             </div>
             <div className="px-6 pb-6 pt-5 space-y-2.5">
-              <Button
-                onClick={() => mesaAcciones && handleAgregarAPedido(mesaAcciones.numero)}
-                className="w-full h-12 font-bold border-white/10 bg-white/5 hover:bg-white/8 text-white gap-2 rounded-xl"
-                variant="outline"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                {mesaAcciones && pedidoParaMesa(mesaAcciones.numero)
-                  ? "Agregar / Modificar Pedido"
-                  : "Ver / Agregar al Pedido"}
-              </Button>
-              {mesaAcciones && pedidoParaMesa(mesaAcciones.numero) && (
-                <Button
-                  onClick={() => mesaAcciones && handleCobrar(mesaAcciones.numero)}
-                  className="w-full h-12 font-black text-base gap-2 rounded-xl ripple-btn"
-                  style={{
-                    background: "linear-gradient(135deg,#FF2D2D 0%,#CC0000 100%)",
-                    boxShadow: "0 8px 24px rgba(255,45,45,0.35)",
-                  }}
-                >
-                  <Banknote className="w-4 h-4" />
-                  Cobrar Mesa
-                </Button>
+              {mesaAcciones?.estado === "en_pago" ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-indigo-300 bg-indigo-500/8 border border-indigo-500/20">
+                    <Receipt className="w-4 h-4 shrink-0" />
+                    Mesa en pago — propina pendiente
+                  </div>
+                  {mesaAcciones && (() => {
+                    const pc = pedidoCobradoParaMesa(mesaAcciones.numero);
+                    return pc ? (
+                      <Button
+                        onClick={() => window.open(`/api/pedidos/${pc.id}/factura`, "_blank")}
+                        className="w-full h-12 font-bold border-white/10 bg-white/5 hover:bg-white/8 text-white gap-2 rounded-xl"
+                        variant="outline"
+                      >
+                        <Printer className="w-4 h-4" />
+                        Imprimir Factura
+                      </Button>
+                    ) : null;
+                  })()}
+                  <Button
+                    onClick={() => mesaAcciones && handleCerrarMesa(mesaAcciones.numero, 0)}
+                    disabled={liberandoMesa}
+                    className="w-full h-12 font-black text-base gap-2 rounded-xl"
+                    style={{
+                      background: "linear-gradient(135deg,#22c55e 0%,#16a34a 100%)",
+                      boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
+                    }}
+                  >
+                    <DoorOpen className="w-4 h-4" />
+                    {liberandoMesa ? "Cerrando..." : "Cerrar Mesa y Liberar"}
+                  </Button>
+                </>
+              ) : mesaAcciones?.estado === "lista_cobro" ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-purple-300 bg-purple-500/8 border border-purple-500/20">
+                    <Receipt className="w-4 h-4 shrink-0" />
+                    Cliente solicitó la cuenta — lista para cobrar
+                  </div>
+                  {mesaAcciones && (() => {
+                    const p = pedidoParaMesa(mesaAcciones.numero);
+                    return p ? (
+                      <Button
+                        onClick={() => mesaAcciones && handleCobrar(mesaAcciones.numero)}
+                        className="w-full h-12 font-black text-base gap-2 rounded-xl ripple-btn"
+                        style={{
+                          background: "linear-gradient(135deg,#FF2D2D 0%,#CC0000 100%)",
+                          boxShadow: "0 8px 24px rgba(255,45,45,0.35)",
+                        }}
+                      >
+                        <Banknote className="w-4 h-4" />
+                        Cobrar Mesa
+                      </Button>
+                    ) : null;
+                  })()}
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => mesaAcciones && handleAgregarAPedido(mesaAcciones.numero)}
+                    className="w-full h-12 font-bold border-white/10 bg-white/5 hover:bg-white/8 text-white gap-2 rounded-xl"
+                    variant="outline"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    {mesaAcciones && pedidoParaMesa(mesaAcciones.numero)
+                      ? "Agregar / Modificar Pedido"
+                      : "Ver / Agregar al Pedido"}
+                  </Button>
+                  {mesaAcciones && pedidoParaMesa(mesaAcciones.numero) && (
+                    <>
+                      <Button
+                        onClick={() => mesaAcciones && handleSolicitarCuenta(mesaAcciones.numero)}
+                        disabled={solicitandoCuenta}
+                        className="w-full h-12 font-bold border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15 text-purple-300 gap-2 rounded-xl"
+                        variant="outline"
+                      >
+                        <Receipt className="w-4 h-4" />
+                        {solicitandoCuenta ? "Solicitando..." : "Solicitar Cuenta"}
+                      </Button>
+                      <Button
+                        onClick={() => mesaAcciones && handleCobrar(mesaAcciones.numero)}
+                        className="w-full h-12 font-black text-base gap-2 rounded-xl ripple-btn"
+                        style={{
+                          background: "linear-gradient(135deg,#FF2D2D 0%,#CC0000 100%)",
+                          boxShadow: "0 8px 24px rgba(255,45,45,0.35)",
+                        }}
+                      >
+                        <Banknote className="w-4 h-4" />
+                        Cobrar Mesa
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
             </div>
           </DialogContent>

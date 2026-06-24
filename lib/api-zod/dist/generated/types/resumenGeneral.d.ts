@@ -15,6 +15,7 @@ export interface ResumenGeneral {
     crecimientoSemana: number;
     tiempoPromedioMin: number;
     efectivoHoy: number;
+    tarjetaHoy: number;
     transferenciaHoy: number;
     propinasHoy: number;
 }

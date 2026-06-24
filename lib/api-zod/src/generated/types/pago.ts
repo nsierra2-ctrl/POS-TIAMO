@@ -6,8 +6,13 @@
  * OpenAPI spec version: 4.0.0
  */
 import type { PagoMetodo } from "./pagoMetodo";
+import type { PagoTipoTarjeta } from "./pagoTipoTarjeta";
 
 export interface Pago {
   metodo: PagoMetodo;
   monto: number;
+  tipoTarjeta?: PagoTipoTarjeta;
+  banco?: string;
+  referencia?: string;
+  ultimos4?: string;
 }

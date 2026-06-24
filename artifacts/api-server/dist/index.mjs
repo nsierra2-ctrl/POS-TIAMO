@@ -31109,10 +31109,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql4, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql4,
+          sql: sql3,
           selectedFields: fields,
           alias,
           isWith,
@@ -50735,7 +50735,13 @@ var EliminarUsuarioResponse = objectType({
 });
 var GetMesasResponseItem = objectType({
   numero: stringType(),
-  estado: enumType(["libre", "ocupada", "proceso"]),
+  estado: enumType([
+    "libre",
+    "ocupada",
+    "lista_cobro",
+    "en_pago",
+    "finalizada"
+  ]),
   personas: numberType(),
   nombre: stringType().optional(),
   zona: stringType().optional()
@@ -50751,14 +50757,20 @@ var ActualizarMesaParams = objectType({
   numero: coerce.string()
 });
 var ActualizarMesaBody = objectType({
-  estado: enumType(["libre", "ocupada", "proceso"]).optional(),
+  estado: enumType(["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"]).optional(),
   personas: numberType().optional(),
   nombre: stringType().optional(),
   zona: stringType().optional()
 });
 var ActualizarMesaResponse = objectType({
   numero: stringType(),
-  estado: enumType(["libre", "ocupada", "proceso"]),
+  estado: enumType([
+    "libre",
+    "ocupada",
+    "lista_cobro",
+    "en_pago",
+    "finalizada"
+  ]),
   personas: numberType(),
   nombre: stringType().optional(),
   zona: stringType().optional()
@@ -50856,8 +50868,19 @@ var GetPedidosResponseItem = objectType({
   metodoPago: enumType(["efectivo", "transferencia", "mixto", "pendiente"]),
   pagos: arrayType(
     objectType({
-      metodo: enumType(["efectivo", "transferencia"]),
-      monto: numberType()
+      metodo: enumType(["efectivo", "tarjeta", "transferencia"]),
+      monto: numberType(),
+      tipoTarjeta: enumType([
+        "debito",
+        "credito",
+        "datafono",
+        "daviplata",
+        "nequi",
+        "boton_bancolombia"
+      ]).optional(),
+      banco: stringType().optional(),
+      referencia: stringType().optional(),
+      ultimos4: stringType().optional()
     })
   ).optional(),
   propina: numberType(),
@@ -50924,8 +50947,19 @@ var GetPedidoResponse = objectType({
   metodoPago: enumType(["efectivo", "transferencia", "mixto", "pendiente"]),
   pagos: arrayType(
     objectType({
-      metodo: enumType(["efectivo", "transferencia"]),
-      monto: numberType()
+      metodo: enumType(["efectivo", "tarjeta", "transferencia"]),
+      monto: numberType(),
+      tipoTarjeta: enumType([
+        "debito",
+        "credito",
+        "datafono",
+        "daviplata",
+        "nequi",
+        "boton_bancolombia"
+      ]).optional(),
+      banco: stringType().optional(),
+      referencia: stringType().optional(),
+      ultimos4: stringType().optional()
     })
   ).optional(),
   propina: numberType(),
@@ -50980,8 +51014,19 @@ var ActualizarPedidoResponse = objectType({
   metodoPago: enumType(["efectivo", "transferencia", "mixto", "pendiente"]),
   pagos: arrayType(
     objectType({
-      metodo: enumType(["efectivo", "transferencia"]),
-      monto: numberType()
+      metodo: enumType(["efectivo", "tarjeta", "transferencia"]),
+      monto: numberType(),
+      tipoTarjeta: enumType([
+        "debito",
+        "credito",
+        "datafono",
+        "daviplata",
+        "nequi",
+        "boton_bancolombia"
+      ]).optional(),
+      banco: stringType().optional(),
+      referencia: stringType().optional(),
+      ultimos4: stringType().optional()
     })
   ).optional(),
   propina: numberType(),
@@ -51020,11 +51065,24 @@ var CobrarPedidoParams = objectType({
 var CobrarPedidoBody = objectType({
   pagos: arrayType(
     objectType({
-      metodo: enumType(["efectivo", "transferencia"]),
-      monto: numberType()
+      metodo: enumType(["efectivo", "tarjeta", "transferencia"]),
+      monto: numberType(),
+      tipoTarjeta: enumType([
+        "debito",
+        "credito",
+        "datafono",
+        "daviplata",
+        "nequi",
+        "boton_bancolombia"
+      ]).optional(),
+      banco: stringType().optional(),
+      referencia: stringType().optional(),
+      ultimos4: stringType().optional()
     })
   ),
   propina: numberType().optional(),
+  propinaSugerida: numberType().optional(),
+  propinaAceptada: numberType().optional(),
   nota: stringType().optional()
 });
 var CobrarPedidoResponse = objectType({
@@ -51033,8 +51091,19 @@ var CobrarPedidoResponse = objectType({
   metodoPago: stringType().optional(),
   pagos: arrayType(
     objectType({
-      metodo: enumType(["efectivo", "transferencia"]),
-      monto: numberType()
+      metodo: enumType(["efectivo", "tarjeta", "transferencia"]),
+      monto: numberType(),
+      tipoTarjeta: enumType([
+        "debito",
+        "credito",
+        "datafono",
+        "daviplata",
+        "nequi",
+        "boton_bancolombia"
+      ]).optional(),
+      banco: stringType().optional(),
+      referencia: stringType().optional(),
+      ultimos4: stringType().optional()
     })
   ).optional(),
   propina: numberType().optional(),
@@ -51066,6 +51135,7 @@ var GetResumenGeneralResponse = objectType({
   crecimientoSemana: numberType(),
   tiempoPromedioMin: numberType(),
   efectivoHoy: numberType(),
+  tarjetaHoy: numberType(),
   transferenciaHoy: numberType(),
   propinasHoy: numberType()
 });
@@ -51074,6 +51144,7 @@ var GetVentasDiariasResponseItem = objectType({
   ventas: numberType(),
   pedidos: numberType(),
   efectivo: numberType(),
+  tarjeta: numberType(),
   transferencia: numberType()
 });
 var GetVentasDiariasResponse = arrayType(GetVentasDiariasResponseItem);
@@ -51149,6 +51220,7 @@ var GetCajaSesionesResponse = arrayType(GetCajaSesionesResponseItem);
 var GetCajaResumenDiaResponse = objectType({
   totalVentas: numberType(),
   totalEfectivo: numberType(),
+  totalTarjeta: numberType(),
   totalTransferencia: numberType(),
   totalPropinas: numberType(),
   pedidosCobrados: numberType(),
@@ -54272,10 +54344,10 @@ var PgRelationalQuery = class extends QueryPromise {
 init_entity();
 init_query_promise();
 var PgRaw = class extends QueryPromise {
-  constructor(execute, sql4, query, mapBatchResult) {
+  constructor(execute, sql3, query, mapBatchResult) {
     super();
     this.execute = execute;
-    this.sql = sql4;
+    this.sql = sql3;
     this.query = query;
     this.mapBatchResult = mapBatchResult;
   }
@@ -54600,8 +54672,8 @@ var NoopCache = class extends Cache {
   async onMutate(_params) {
   }
 };
-async function hashQuery(sql4, params) {
-  const dataToHash = `${sql4}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -55345,7 +55417,7 @@ var createInsertSchema = (entity, refine) => {
 var mesasTable = pgTable("mesas", {
   numero: text("numero").primaryKey(),
   nombre: text("nombre"),
-  estado: text("estado", { enum: ["libre", "ocupada", "proceso"] }).notNull().default("libre"),
+  estado: text("estado", { enum: ["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"] }).notNull().default("libre"),
   personas: integer("personas").notNull().default(0),
   actualizadoEn: timestamp("actualizado_en").defaultNow().notNull()
 });
@@ -55362,8 +55434,12 @@ var itemPedidoSchema = external_exports.object({
   observaciones: external_exports.string().optional()
 });
 var pagoSchema = external_exports.object({
-  metodo: external_exports.enum(["efectivo", "transferencia"]),
-  monto: external_exports.number().int().min(0)
+  metodo: external_exports.enum(["efectivo", "tarjeta", "transferencia"]),
+  monto: external_exports.number().int().min(0),
+  tipoTarjeta: external_exports.enum(["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]).optional(),
+  banco: external_exports.string().optional(),
+  referencia: external_exports.string().optional(),
+  ultimos4: external_exports.string().optional()
 });
 var historialEstadoSchema = external_exports.object({
   estado: external_exports.string(),
@@ -55380,9 +55456,14 @@ var pedidosTable = pgTable("pedidos", {
   total: integer("total").notNull(),
   notas: text("notas"),
   meseroId: integer("mesero_id"),
-  metodoPago: text("metodo_pago", { enum: ["efectivo", "transferencia", "mixto", "pendiente"] }).notNull().default("pendiente"),
+  metodoPago: text("metodo_pago", { enum: ["efectivo", "tarjeta", "transferencia", "mixto", "pendiente"] }).notNull().default("pendiente"),
   pagos: jsonb("pagos").$type().default([]),
   propina: integer("propina").notNull().default(0),
+  propinaSugerida: integer("propina_sugerida").notNull().default(0),
+  propinaAceptada: integer("propina_aceptada").notNull().default(0),
+  propinaRechazada: integer("propina_rechazada").notNull().default(0),
+  cambio: integer("cambio").notNull().default(0),
+  numeroFactura: text("numero_factura"),
   cobradoEn: timestamp("cobrado_en"),
   cobradoPor: integer("cobrado_por"),
   historialEstados: jsonb("historial_estados").$type().default([]),
@@ -55396,6 +55477,8 @@ var updatePedidoSchema = external_exports.object({
 var cobrarPedidoSchema = external_exports.object({
   pagos: external_exports.array(pagoSchema).min(1),
   propina: external_exports.number().int().min(0).optional(),
+  propinaSugerida: external_exports.number().int().min(0).optional(),
+  propinaAceptada: external_exports.number().int().min(0).optional(),
   nota: external_exports.string().optional()
 });
 
@@ -55461,8 +55544,11 @@ var cajaSesionesTable = pgTable("caja_sesiones", {
   cierreEn: timestamp("cierre_en"),
   montoInicial: integer("monto_inicial").notNull().default(0),
   totalEfectivo: integer("total_efectivo").notNull().default(0),
+  totalTarjeta: integer("total_tarjeta").notNull().default(0),
   totalTransferencia: integer("total_transferencia").notNull().default(0),
   totalPropinas: integer("total_propinas").notNull().default(0),
+  totalVentas: integer("total_ventas").notNull().default(0),
+  cantidadPedidos: integer("cantidad_pedidos").notNull().default(0),
   diferencia: integer("diferencia").notNull().default(0),
   estado: text("estado", { enum: ["abierta", "cerrada"] }).notNull().default("abierta"),
   notas: text("notas")
@@ -55482,6 +55568,7 @@ var cajaHistorialTable = pgTable("caja_historial", {
   usuarioNombre: text("usuario_nombre").notNull(),
   montoInicial: integer("monto_inicial").notNull().default(0),
   totalEfectivo: integer("total_efectivo").notNull().default(0),
+  totalTarjeta: integer("total_tarjeta").notNull().default(0),
   totalTransferencia: integer("total_transferencia").notNull().default(0),
   totalPropinas: integer("total_propinas").notNull().default(0),
   totalVentas: integer("total_ventas").notNull().default(0),
@@ -55521,6 +55608,7 @@ var configuracionTable = pgTable("configuracion", {
   ciudad: text("ciudad").default(""),
   moneda: text("moneda").notNull().default("COP"),
   prefijoFactura: text("prefijo_factura").default("F"),
+  ultimoNumeroFactura: integer("ultimo_numero_factura").default(0),
   mensajeFactura: text("mensaje_factura").default("\xA1Gracias por tu visita!"),
   configurado: boolean("configurado").notNull().default(false),
   creadoEn: timestamp("creado_en").defaultNow().notNull(),
@@ -55668,7 +55756,7 @@ async function seedMesasYCaja() {
       await db.insert(mesasTable).values({
         numero: m.numero,
         nombre: m.nombre,
-        estado: m.numero === "03" || m.numero === "07" ? "ocupada" : m.numero === "05" ? "proceso" : "libre",
+        estado: m.numero === "03" || m.numero === "07" ? "ocupada" : m.numero === "05" ? "en_pago" : "libre",
         personas: m.numero === "03" ? 4 : m.numero === "07" ? 2 : m.numero === "05" ? 6 : 0
       });
       console.log(`  -> Mesa ${m.numero} creada`);
@@ -56075,6 +56163,70 @@ router4.patch("/mesas/:numero", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
+router4.post("/mesas/:numero/solicitar-cuenta", requireAuth, async (req, res) => {
+  const numero = req.params.numero;
+  if (!numero) {
+    res.status(400).json({ error: "Mesa inv\xE1lida" });
+    return;
+  }
+  try {
+    const [mesa] = await db.update(mesasTable).set({ estado: "lista_cobro", actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, numero)).returning();
+    if (!mesa) {
+      res.status(404).json({ error: "Mesa no encontrada" });
+      return;
+    }
+    broadcast("mesas_actualizadas", { numero });
+    res.json({ ok: true, mesa });
+  } catch (e) {
+    req.log.error(e, "Error al solicitar cuenta");
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+router4.post("/mesas/:numero/cerrar", requireAuth, async (req, res) => {
+  const numero = req.params.numero;
+  const schema = external_exports.object({
+    propina: external_exports.number().int().min(0).optional(),
+    propinaAceptada: external_exports.number().int().min(0).optional(),
+    propinaRechazada: external_exports.number().int().min(0).optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Datos inv\xE1lidos" });
+    return;
+  }
+  try {
+    const propina = parsed.data.propina ?? 0;
+    const propinaAceptada = parsed.data.propinaAceptada ?? 0;
+    const propinaRechazada = parsed.data.propinaRechazada ?? 0;
+    const [ultimoPedido] = await db.select().from(pedidosTable).where(and(eq(pedidosTable.mesa, numero), eq(pedidosTable.estado, "cobrado"))).orderBy(desc(pedidosTable.cobradoEn)).limit(1);
+    if (ultimoPedido) {
+      const propinaNueva = (ultimoPedido.propina ?? 0) + propina;
+      await db.update(pedidosTable).set({
+        propina: propinaNueva,
+        ...propinaAceptada > 0 ? { propinaAceptada } : {},
+        ...propinaRechazada > 0 ? { propinaRechazada } : {}
+      }).where(eq(pedidosTable.id, ultimoPedido.id));
+      broadcast("pedido_actualizado", { id: ultimoPedido.id });
+    }
+    const [mesa] = await db.update(mesasTable).set({ estado: "finalizada", personas: 0, actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, numero)).returning();
+    if (!mesa) {
+      res.status(404).json({ error: "Mesa no encontrada" });
+      return;
+    }
+    setTimeout(async () => {
+      try {
+        await db.update(mesasTable).set({ estado: "libre", actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, numero));
+        broadcast("mesas_actualizadas", { numero });
+      } catch {
+      }
+    }, 500);
+    broadcast("mesas_actualizadas", { numero });
+    res.json({ ok: true, mesa: { ...mesa, estado: "libre" } });
+  } catch (e) {
+    req.log.error(e, "Error al cerrar mesa");
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
 router4.delete("/mesas/:numero", requireAuth, requireRol("admin"), async (req, res) => {
   const numero = req.params.numero;
   if (!numero) {
@@ -56157,9 +56309,13 @@ function buildFacturaTicket(p) {
     return padLine(display, price) + (i.observaciones ? `
   * ${i.observaciones.substring(0, LINE - 4)}` : "");
   }).join("\n");
-  const pagosTxt = p.pagos.map(
-    (pg2) => padLine(pg2.metodo === "efectivo" ? "Efectivo:" : "Transferencia:", fmtPrice(pg2.monto))
-  ).join("\n");
+  const pagosTxt = p.pagos.map((pg2) => {
+    let label = pg2.metodo === "efectivo" ? "Efectivo:" : pg2.metodo === "tarjeta" ? "Tarjeta:" : "Transferencia:";
+    if (pg2.metodo === "tarjeta" && pg2.tipoTarjeta) {
+      label += ` (${pg2.tipoTarjeta})`;
+    }
+    return padLine(label, fmtPrice(pg2.monto));
+  }).join("\n");
   const lines = [
     divider("="),
     center("TIAMO BURGER"),
@@ -56167,7 +56323,8 @@ function buildFacturaTicket(p) {
     center("Tel:3219600269"),
     divider("="),
     center("FACTURA VENTA"),
-    center(`#${String(p.id).padStart(4, "0")} Mesa${p.mesa}`),
+    p.numeroFactura ? center(`N\xB0 ${p.numeroFactura}`) : center(`#${String(p.id).padStart(4, "0")}`),
+    center(`Mesa ${p.mesa}`),
     divider("="),
     `${fecha} ${hora}`,
     `Mesero:${p.mesero ?? "-"}`,
@@ -56398,9 +56555,13 @@ function buildEscPosFactura(p) {
     }
     return line2;
   }).join("\n");
-  const pagosTxt = p.pagos.map(
-    (pg2) => padLine2(pg2.metodo === "efectivo" ? "Efectivo:" : "Transferencia:", fmtPrice2(pg2.monto))
-  ).join("\n");
+  const pagosTxt = p.pagos.map((pg2) => {
+    let label = pg2.metodo === "efectivo" ? "Efectivo:" : pg2.metodo === "tarjeta" ? "Tarjeta:" : "Transferencia:";
+    if (pg2.metodo === "tarjeta" && pg2.tipoTarjeta) {
+      label += ` (${pg2.tipoTarjeta})`;
+    }
+    return padLine2(label, fmtPrice2(pg2.monto));
+  }).join("\n");
   const parts = [
     CMD.init,
     CMD.codePage(16),
@@ -56417,8 +56578,10 @@ function buildEscPosFactura(p) {
     "\n",
     CMD.boldOff,
     CMD.alignCenter,
+    CMD.boldOn,
     "Tel:3219600269",
     "\n",
+    CMD.boldOff,
     divider2("="),
     "\n",
     CMD.alignCenter,
@@ -56430,14 +56593,18 @@ function buildEscPosFactura(p) {
     CMD.boldOff,
     CMD.alignCenter,
     CMD.boldOn,
-    `#${String(p.id).padStart(4, "0")} Mesa${p.mesa}`,
+    p.numeroFactura ? `N\xB0 ${p.numeroFactura}` : `#${String(p.id).padStart(4, "0")}`,
+    "\n",
+    `Mesa ${p.mesa}`,
     "\n",
     CMD.boldOff,
     divider2("="),
     "\n",
     CMD.alignLeft,
+    CMD.boldOn,
     `${fecha} ${hora}`,
     "\n",
+    CMD.boldOff,
     CMD.boldOn,
     `Mesero:${p.mesero ?? "-"}`,
     "\n",
@@ -56949,15 +57116,18 @@ router6.patch("/pedidos/:id", requireAuth, async (req, res) => {
       res.status(404).json({ error: "Pedido no encontrado" });
       return;
     }
-    if (parsed.data.estado === "listo" || parsed.data.estado === "cobrado" || parsed.data.estado === "cancelado") {
+    if (parsed.data.estado === "cancelado") {
       const pedidosActivos = await db.select({ count: sql`cast(count(*) as int)` }).from(pedidosTable).where(and(
         eq(pedidosTable.mesa, pedido.mesa),
-        sql`${pedidosTable.estado} in ('nuevo', 'preparando')`
+        sql`${pedidosTable.estado} in ('nuevo', 'preparando', 'listo')`
       ));
       if ((pedidosActivos[0]?.count ?? 0) === 0) {
         await db.update(mesasTable).set({ estado: "libre", personas: 0, actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, pedido.mesa));
         broadcast("mesas_actualizadas", {});
       }
+    } else if (parsed.data.estado === "cobrado") {
+      await db.update(mesasTable).set({ estado: "en_pago", actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, pedido.mesa));
+      broadcast("mesas_actualizadas", {});
     }
     const result = serializePedido(pedido);
     broadcast("pedido_actualizado", result);
@@ -56985,22 +57155,29 @@ router6.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
       res.status(404).json({ error: "Pedido no encontrado" });
       return;
     }
-    if (pedidoActual.estado === "cobrado") {
-      res.status(400).json({ error: "El pedido ya fue cobrado" });
-      return;
-    }
     if (pedidoActual.estado === "cancelado") {
       res.status(400).json({ error: "El pedido fue cancelado" });
       return;
     }
-    const { pagos, propina = 0, nota } = parsed.data;
+    const { pagos, propina = 0, propinaSugerida = 0, propinaAceptada = 0, nota } = parsed.data;
     const totalPagado = pagos.reduce((sum2, p) => sum2 + p.monto, 0);
     const totalConPropina = pedidoActual.total + propina;
+    const cambio = Math.max(0, totalPagado - totalConPropina);
     if (totalPagado < totalConPropina) {
       res.status(400).json({ error: `Monto insuficiente. Total: ${totalConPropina}, pagado: ${totalPagado}` });
       return;
     }
     const metodoPago = pagos.length === 1 ? pagos[0].metodo : "mixto";
+    let numeroFactura = null;
+    try {
+      const [cfg] = await db.select().from(configuracionTable).limit(1);
+      const prefijo = cfg?.prefijoFactura ?? "F";
+      const ultimo = (cfg?.ultimoNumeroFactura ?? 0) + 1;
+      numeroFactura = `${prefijo}${String(ultimo).padStart(6, "0")}`;
+      await db.update(configuracionTable).set({ ultimoNumeroFactura: ultimo }).where(eq(configuracionTable.id, cfg?.id ?? 1));
+    } catch {
+      numeroFactura = `F${String(id).padStart(6, "0")}`;
+    }
     const historialPrev = Array.isArray(pedidoActual.historialEstados) ? pedidoActual.historialEstados : [];
     const nuevoHistorial = [
       ...historialPrev,
@@ -57011,11 +57188,16 @@ router6.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
       metodoPago,
       pagos,
       propina,
+      propinaSugerida,
+      propinaAceptada,
+      propinaRechazada: propinaSugerida > propinaAceptada ? propinaSugerida - propinaAceptada : 0,
+      cambio,
+      numeroFactura,
       cobradoEn: /* @__PURE__ */ new Date(),
       cobradoPor: usuario?.id ?? null,
       historialEstados: nuevoHistorial
     }).where(eq(pedidosTable.id, id)).returning();
-    await db.update(mesasTable).set({ estado: "libre", personas: 0, actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, pedidoActual.mesa));
+    await db.update(mesasTable).set({ estado: "en_pago", actualizadoEn: /* @__PURE__ */ new Date() }).where(eq(mesasTable.numero, pedidoActual.mesa));
     const itemsArray = Array.isArray(pedidoActual.items) ? pedidoActual.items : [];
     const itemsFactura = itemsArray.map((i) => ({
       nombre: i.nombre,
@@ -57026,31 +57208,33 @@ router6.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     }));
     const facturaTicket = buildFacturaTicket({
       id: pedido.id,
+      numeroFactura,
       mesa: pedidoActual.mesa,
       items: itemsFactura,
       total: pedidoActual.total,
       notas: pedidoActual.notas ?? void 0,
       mesero: pedidoActual.meseroId ? usuario?.nombre ?? void 0 : void 0,
-      fecha: /* @__PURE__ */ new Date(),
-      pagos: pagos.map((p) => ({ metodo: p.metodo, monto: p.monto })),
+      fecha: new Date(pedido.cobradoEn),
+      pagos: pagos.map((p) => ({ metodo: p.metodo, monto: p.monto, tipoTarjeta: p.tipoTarjeta, banco: p.banco, referencia: p.referencia })),
       propina,
       totalConPropina,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       metodoPago,
       cobradoPor: usuario?.nombre ?? void 0
     });
     const facturaEscPos = buildEscPosFactura({
       id: pedido.id,
+      numeroFactura,
       mesa: pedidoActual.mesa,
       items: itemsFactura,
       total: pedidoActual.total,
       notas: pedidoActual.notas ?? void 0,
       mesero: pedidoActual.meseroId ? usuario?.nombre ?? void 0 : void 0,
-      fecha: /* @__PURE__ */ new Date(),
-      pagos: pagos.map((p) => ({ metodo: p.metodo, monto: p.monto })),
+      fecha: new Date(pedido.cobradoEn),
+      pagos: pagos.map((p) => ({ metodo: p.metodo, monto: p.monto, tipoTarjeta: p.tipoTarjeta, banco: p.banco, referencia: p.referencia })),
       propina,
       totalConPropina,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       metodoPago,
       cobradoPor: usuario?.nombre ?? void 0
     });
@@ -57060,7 +57244,7 @@ router6.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     broadcast("mesas_actualizadas", {});
     res.json({
       ...result,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       facturaTicket,
       impresion: impresionFactura
     });
@@ -57109,7 +57293,7 @@ router6.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
     };
     const items = Array.isArray(pedido.items) ? pedido.items : [];
     const pagos = Array.isArray(pedido.pagos) ? pedido.pagos : [];
-    const fecha = new Date(pedido.creadoEn).toLocaleString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const fecha = new Date(pedido.cobradoEn ?? pedido.creadoEn).toLocaleString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
     const formatCOP = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: cfg.moneda, minimumFractionDigits: 0 }).format(n);
     const LINE2 = 30;
     const pad = (l, r) => l + " ".repeat(Math.max(1, LINE2 - l.length - r.length)) + r;
@@ -57133,7 +57317,7 @@ router6.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
       cfg.telefono ? ctr(`Tel:${cfg.telefono}`) : "",
       div("="),
       ctr("FACTURA VENTA"),
-      ctr(`#${String(pedido.id).padStart(4, "0")} Mesa${pedido.mesa}`),
+      ctr(`${pedido.numeroFactura ? `Factura ${pedido.numeroFactura}` : `#${String(pedido.id).padStart(4, "0")}`} Mesa${pedido.mesa}`),
       div("="),
       fecha,
       `Mesero:${pedido.meseroNombre ?? "-"}`,
@@ -57152,27 +57336,71 @@ router6.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
       ctr(cfg.mensajeFactura || "Gracias por su visita!"),
       div("=")
     ].filter(Boolean).join("\n");
+    const itemsHtml = items.map((item) => {
+      const qty = Number(item.cantidad) || 0;
+      const sub = formatCOP((item.precio || 0) * qty);
+      const obs = item.observaciones ? `<div class="obs">&#x21B3; ${esc(String(item.observaciones))}</div>` : "";
+      return `<div class="row"><span>${qty}x ${esc(item.nombre)}</span><span>${sub}</span></div>${obs}`;
+    }).join("");
+    const pagosHtml = pagos.map((p) => {
+      const label = p.metodo === "efectivo" ? "Efectivo:" : p.metodo === "transferencia" ? "Transferencia:" : esc(p.metodo) + ":";
+      return `<div class="row"><span>${label}</span><span>${formatCOP(p.monto || 0)}</span></div>`;
+    }).join("");
+    const totalFinal = (pedido.total || 0) + (pedido.propina || 0);
+    const cambioVal = pedido.cambio ?? 0;
     const html = `<!DOCTYPE html>
 <html lang="es"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Factura #${pedido.id} \u2014 ${cfg.nombreNegocio}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Courier New',monospace;width:58mm;margin:0 auto;padding:4px;color:#000;background:#fff;font-size:11px;line-height:1.35}
-    pre{white-space:pre;font-family:inherit;font-size:11px;line-height:1.35;margin:0}
-    .header{text-align:center;padding:8px 0;border-bottom:1px dashed #333;margin-bottom:8px}
-    .brand{font-size:14px;font-weight:900;letter-spacing:1px;color:#CC0000}
-    .tagline{font-size:9px;color:#666}
-    @media print{@page{margin:0;size:58mm auto}body{padding:2px;width:58mm}.no-print{display:none}}
+    body{font-family:'Courier New',Courier,monospace;width:72mm;max-width:72mm;margin:0 auto;padding:6px;color:#000;background:#fff;font-size:13px;line-height:1.6;font-weight:700}
+    .center{text-align:center}
+    .brand{font-size:22px;font-weight:900;letter-spacing:2px;color:#CC0000;text-transform:uppercase}
+    .tagline{font-size:12px;font-weight:700;margin-top:2px}
+    .info{font-size:12px;font-weight:700;margin:1px 0}
+    .section-title{font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:1px}
+    .order-num{font-size:13px;font-weight:700}
+    .hr{border:none;border-top:1px dashed #000;margin:5px 0}
+    .hr-solid{border:none;border-top:2px solid #000;margin:5px 0}
+    .row{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:13px;margin:3px 0;gap:4px}
+    .row span:first-child{flex:1}
+    .row span:last-child{white-space:nowrap;font-weight:700}
+    .row.big{font-size:18px;font-weight:900;margin:4px 0}
+    .obs{font-size:11px;font-weight:700;padding-left:14px;margin-bottom:2px}
+    .footer{font-size:14px;font-weight:900;text-align:center;margin-top:4px}
+    @media print{@page{margin:0;size:72mm auto}body{width:72mm;padding:2px}.no-print{display:none!important}}
   </style>
 </head><body>
-  <div class="header">
+  <div class="center">
     <div class="brand">${cfg.nombreNegocio}</div>
     ${cfg.slogan ? `<div class="tagline">${cfg.slogan}</div>` : ""}
+    ${cfg.telefono ? `<div class="info">Tel: ${cfg.telefono}</div>` : ""}
+    ${cfg.direccion ? `<div class="info">${cfg.direccion}</div>` : ""}
+    ${cfg.ruc ? `<div class="info">NIT: ${cfg.ruc}</div>` : ""}
   </div>
-  <pre>${ticketText.replace(/</g, "&lt;")}</pre>
-  <div class="no-print" style="text-align:center;margin-top:16px;">
-    <button onclick="window.print()" style="background:#CC0000;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">\u{1F5A8}\uFE0F Imprimir</button>
+  <hr class="hr-solid">
+  <div class="center section-title">FACTURA DE VENTA</div>
+  <div class="center order-num">${pedido.numeroFactura ? `Factura: ${pedido.numeroFactura}` : `N&deg; ${String(pedido.id).padStart(4, "0")}`} &nbsp;&middot;&nbsp; Mesa ${pedido.mesa}</div>
+  <hr class="hr">
+  <div class="info">Fecha: ${fecha}</div>
+  <div class="info">Mesero: ${esc(pedido.meseroNombre ?? "-")}</div>
+  <div class="info">Cajero: ${esc(pedido.cobradoPorNombre ?? "-")}</div>
+  <hr class="hr">
+  ${itemsHtml}
+  <hr class="hr">
+  <div class="row"><span>Subtotal:</span><span>${formatCOP(pedido.total || 0)}</span></div>
+  ${(pedido.propina || 0) > 0 ? `<div class="row"><span>Propina:</span><span>${formatCOP(pedido.propina)}</span></div>` : ""}
+  <hr class="hr-solid">
+  <div class="row big"><span>TOTAL:</span><span>${formatCOP(totalFinal)}</span></div>
+  <hr class="hr-solid">
+  ${pagosHtml}
+  ${cambioVal > 0 ? `<div class="row"><span>Cambio:</span><span>${formatCOP(cambioVal)}</span></div>` : ""}
+  <hr class="hr">
+  <div class="footer">${cfg.mensajeFactura || "\xA1Gracias por su visita!"}</div>
+  <div class="no-print" style="text-align:center;margin-top:16px">
+    <button onclick="window.print()" style="background:#CC0000;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:900;cursor:pointer">\u{1F5A8}\uFE0F Imprimir Factura</button>
+    <button onclick="window.close()" style="background:#555;color:#fff;border:none;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px">\u2715 Cerrar</button>
   </div>
   <script>if(new URLSearchParams(window.location.search).get('autoprint')==='1')window.onload=()=>window.print();</script>
 </body></html>`;
@@ -57459,12 +57687,14 @@ router9.get("/reportes/resumen", requireAuth, requireRol("admin"), async (req, r
       and(eq(pedidosTable.estado, "cobrado"), gte(pedidosTable.creadoEn, inicioHoy))
     );
     let efectivoHoy = 0;
+    let tarjetaHoy = 0;
     let transferenciaHoy = 0;
     let propinasHoy = 0;
     for (const p of pedidosCobradosHoy) {
       const pagos = Array.isArray(p.pagos) ? p.pagos : [];
       for (const pg2 of pagos) {
         if (pg2.metodo === "efectivo") efectivoHoy += pg2.monto;
+        else if (pg2.metodo === "tarjeta") tarjetaHoy += pg2.monto;
         else if (pg2.metodo === "transferencia") transferenciaHoy += pg2.monto;
       }
       propinasHoy += p.propina ?? 0;
@@ -57479,6 +57709,7 @@ router9.get("/reportes/resumen", requireAuth, requireRol("admin"), async (req, r
       crecimientoSemana: Math.round(crecimiento * 10) / 10,
       tiempoPromedioMin: 12,
       efectivoHoy,
+      tarjetaHoy,
       transferenciaHoy,
       propinasHoy
     });
@@ -57500,17 +57731,19 @@ router9.get("/reportes/ventas-diarias", requireAuth, requireRol("admin"), async 
       );
       let ventas = 0;
       let efectivo = 0;
+      let tarjeta = 0;
       let transferencia = 0;
       for (const p of pedidosDia) {
         ventas += p.total;
         const pagos = Array.isArray(p.pagos) ? p.pagos : [];
         for (const pg2 of pagos) {
           if (pg2.metodo === "efectivo") efectivo += pg2.monto;
+          else if (pg2.metodo === "tarjeta") tarjeta += pg2.monto;
           else if (pg2.metodo === "transferencia") transferencia += pg2.monto;
         }
       }
       const fechaStr = inicio.toLocaleDateString("es-CO", { weekday: "short", day: "numeric" });
-      dias.push({ fecha: fechaStr, ventas, pedidos: pedidosDia.length, efectivo, transferencia });
+      dias.push({ fecha: fechaStr, ventas, pedidos: pedidosDia.length, efectivo, tarjeta, transferencia });
     }
     res.json(dias);
   } catch (e) {
@@ -57587,6 +57820,10 @@ router9.get("/reportes/pdf-dia", requireAuth, requireRol("admin"), async (req, r
       const pagos = Array.isArray(p.pagos) ? p.pagos : [];
       return s + pagos.filter((pa) => pa.metodo === "efectivo").reduce((a, pa) => a + pa.monto, 0);
     }, 0);
+    const totalTarjeta = cobrados.filter((p) => p.metodoPago === "tarjeta" || p.metodoPago === "mixto").reduce((s, p) => {
+      const pagos = Array.isArray(p.pagos) ? p.pagos : [];
+      return s + pagos.filter((pa) => pa.metodo === "tarjeta").reduce((a, pa) => a + pa.monto, 0);
+    }, 0);
     const totalTransferencia = cobrados.filter((p) => p.metodoPago === "transferencia" || p.metodoPago === "mixto").reduce((s, p) => {
       const pagos = Array.isArray(p.pagos) ? p.pagos : [];
       return s + pagos.filter((pa) => pa.metodo === "transferencia").reduce((a, pa) => a + pa.monto, 0);
@@ -57612,10 +57849,22 @@ router9.get("/reportes/pdf-dia", requireAuth, requireRol("admin"), async (req, r
       }
     }
     const topProductos = [...productosMap.values()].sort((a, b) => b.cantidad - a.cantidad).slice(0, 10);
-    const pedidosRows = cobrados.slice(0, 30).map((p) => {
-      const hora = new Date(p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const pedidosRows = cobrados.map((p) => {
+      const hora = new Date(p.cobradoEn ?? p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
       return `<tr><td>#${String(p.id).padStart(4, "0")}</td><td>${p.mesa}</td><td>${hora}</td><td>${p.metodoPago ?? "\u2014"}</td><td style="text-align:right;font-weight:700;">${formatCOP(p.total)}</td>${p.propina > 0 ? `<td style="text-align:right;color:#7c3aed;">${formatCOP(p.propina)}</td>` : "<td>\u2014</td>"}</tr>`;
     }).join("");
+    const itemsDetalle = [];
+    for (const p of cobrados) {
+      const hora = new Date(p.cobradoEn ?? p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+      const items = Array.isArray(p.items) ? p.items : [];
+      for (const it of items) {
+        itemsDetalle.push({ mesa: p.mesa, hora, nombre: it.nombre ?? "?", cantidad: it.cantidad ?? 1, precio: it.precio ?? 0, subtotal: (it.precio ?? 0) * (it.cantidad ?? 1) });
+      }
+    }
+    const totalItemsSubtotal = itemsDetalle.reduce((s, i) => s + i.subtotal, 0);
+    const itemsDetalleHtml = itemsDetalle.map(
+      (it) => `<tr><td>${it.mesa}</td><td>${it.hora}</td><td>${it.nombre}</td><td style="text-align:center;">${it.cantidad}</td><td style="text-align:right;">${formatCOP(it.precio)}</td><td style="text-align:right;font-weight:700;">${formatCOP(it.subtotal)}</td></tr>`
+    ).join("") + (itemsDetalle.length > 0 ? `<tr style="background:#CC0000;color:#fff;"><td colspan="5" style="font-weight:800;padding:8px 10px;text-transform:uppercase;letter-spacing:.5px;">Total General</td><td style="text-align:right;font-weight:900;padding:8px 10px;">${formatCOP(totalItemsSubtotal)}</td></tr>` : `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin productos vendidos hoy</td></tr>`);
     const meseroRowsHtml = meseroRows.map((m) => `<tr><td>${m.nombre}</td><td style="text-align:center;">${m.pedidos}</td><td style="text-align:right;font-weight:700;">${formatCOP(m.ventas)}</td></tr>`).join("");
     const productosRowsHtml = topProductos.map((p, i) => `<tr><td style="text-align:center;">${i + 1}</td><td>${p.nombre}</td><td style="text-align:center;">${p.cantidad}</td><td style="text-align:right;font-weight:700;">${formatCOP(p.total)}</td></tr>`).join("");
     const html = `<!DOCTYPE html><html lang="es"><head>
@@ -57635,8 +57884,9 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff
 .payment-row{display:flex;gap:12px;margin-bottom:24px}
 .payment-card{flex:1;background:#f9f9f9;border-radius:12px;padding:14px;border:1px solid #eee}
 .payment-card.green .kpi-value{color:#16a34a}
+.payment-card.violet .kpi-value{color:#7c3aed}
 .payment-card.blue .kpi-value{color:#2563eb}
-.payment-card.purple .kpi-value{color:#7c3aed}
+.payment-card.purple .kpi-value{color:#a855f7}
 h2{font-size:14px;font-weight:800;margin-bottom:12px;color:#1a1a1a;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #CC0000;padding-left:8px}
 table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:12px}
 thead th{background:#CC0000;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left}
@@ -57657,13 +57907,16 @@ tbody tr:nth-child(even){background:#f9f9f9}tbody tr td{padding:7px 10px;border-
 </div>
 <div class="payment-row">
   <div class="payment-card green"><div class="kpi-label">\u{1F4B5} Efectivo</div><div class="kpi-value">${formatCOP(totalEfectivo)}</div></div>
-  <div class="payment-card blue"><div class="kpi-label">\u{1F4B3} Transferencia</div><div class="kpi-value">${formatCOP(totalTransferencia)}</div></div>
+  <div class="payment-card violet"><div class="kpi-label">\u{1F4B3} Tarjeta</div><div class="kpi-value">${formatCOP(totalTarjeta)}</div></div>
+  <div class="payment-card blue"><div class="kpi-label">\u{1F4BE} Transferencia</div><div class="kpi-value">${formatCOP(totalTransferencia)}</div></div>
   <div class="payment-card purple"><div class="kpi-label">\u2B50 Propinas</div><div class="kpi-value">${formatCOP(totalPropinas)}</div></div>
 </div>
 ${meseroRows.length > 0 ? `<h2>Ventas por Mesero</h2><table><thead><tr><th>Mesero</th><th style="text-align:center">Pedidos</th><th style="text-align:right">Ventas</th></tr></thead><tbody>${meseroRowsHtml}</tbody></table>` : ""}
 ${topProductos.length > 0 ? `<h2>Top 10 Productos M\xE1s Vendidos</h2><table><thead><tr><th style="text-align:center">#</th><th>Producto</th><th style="text-align:center">Cantidad</th><th style="text-align:right">Total</th></tr></thead><tbody>${productosRowsHtml}</tbody></table>` : ""}
 <h2>Detalle de Pedidos Cobrados</h2>
-<table><thead><tr><th>ID</th><th>Mesa</th><th>Hora</th><th>M\xE9todo</th><th style="text-align:right">Total</th><th style="text-align:right">Propina</th></tr></thead><tbody>${pedidosRows || `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin pedidos cobrados hoy</td></tr>`}</tbody></table>
+<table><thead><tr><th>ID</th><th>Mesa</th><th>Hora Cobro</th><th>M\xE9todo</th><th style="text-align:right">Total</th><th style="text-align:right">Propina</th></tr></thead><tbody>${pedidosRows || `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin pedidos cobrados hoy</td></tr>`}</tbody></table>
+<h2>Desglose de Productos Vendidos</h2>
+<table><thead><tr><th>Mesa</th><th>Hora</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itemsDetalleHtml}</tbody></table>
 <div class="footer"><p>Este reporte es de uso exclusivo del negocio \xB7 TIAMO BURGER POS \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()}</p></div>
 <button class="print-btn" onclick="window.print()">\u{1F5A8}\uFE0F Imprimir / Guardar como PDF</button>
 <script>if(new URLSearchParams(window.location.search).get('autoprint')==='1')window.onload=()=>window.print();</script>
@@ -57705,11 +57958,13 @@ async function generarReportePeriodoHTML(opts) {
   const totalVentas = cobrados.reduce((s, p) => s + (p.total || 0), 0);
   const totalPropinas = cobrados.reduce((s, p) => s + (p.propina || 0), 0);
   let totalEfectivo = 0;
+  let totalTarjeta = 0;
   let totalTransferencia = 0;
   for (const p of cobrados) {
     const pagos = Array.isArray(p.pagos) ? p.pagos : [];
     for (const pa of pagos) {
       if (pa.metodo === "efectivo") totalEfectivo += pa.monto;
+      else if (pa.metodo === "tarjeta") totalTarjeta += pa.monto;
       else if (pa.metodo === "transferencia") totalTransferencia += pa.monto;
     }
   }
@@ -57791,7 +58046,8 @@ tbody tr:nth-child(even){background:#f9f9f9}tbody tr td{padding:7px 10px;border-
 </div>
 <div style="display:flex;gap:12px;margin-bottom:24px">
 <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px"><div class="kpi-label">\u{1F4B5} Efectivo</div><div class="kpi-value" style="color:#16a34a">${formatCOP(totalEfectivo)}</div></div>
-<div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px"><div class="kpi-label">\u{1F4B3} Transferencia</div><div class="kpi-value" style="color:#2563eb">${formatCOP(totalTransferencia)}</div></div>
+<div style="flex:1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:14px"><div class="kpi-label">\u{1F4B3} Tarjeta</div><div class="kpi-value" style="color:#7c3aed">${formatCOP(totalTarjeta)}</div></div>
+<div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px"><div class="kpi-label">\u{1F4BE} Transferencia</div><div class="kpi-value" style="color:#2563eb">${formatCOP(totalTransferencia)}</div></div>
 </div>
 ${diasArr.length > 0 ? `<h2>Tendencia de Ventas</h2><div class="chart-card"><div class="chart">${barrasHtml}</div></div>` : ""}
 ${meseros.length > 0 ? `<h2>Ventas por Mesero</h2><table><thead><tr><th>Mesero</th><th style="text-align:center">Pedidos</th><th style="text-align:right">Ventas</th></tr></thead><tbody>${meserosHtml}</tbody></table>` : ""}
@@ -57916,30 +58172,70 @@ router11.post("/caja/cerrar", requireAuth, requireRol("admin", "caja"), async (r
       gte(pedidosTable.cobradoEn, sesion.aperturaEn)
     ));
     let totalEfectivo = 0;
+    let totalTarjeta = 0;
     let totalTransferencia = 0;
     let totalPropinas = 0;
+    let totalVentas = 0;
     for (const p of pedidosCobrados) {
       const pagos = Array.isArray(p.pagos) ? p.pagos : [];
       for (const pago of pagos) {
         if (pago.metodo === "efectivo") totalEfectivo += pago.monto;
+        else if (pago.metodo === "tarjeta") totalTarjeta += pago.monto;
         else if (pago.metodo === "transferencia") totalTransferencia += pago.monto;
       }
       totalPropinas += p.propina ?? 0;
+      totalVentas += p.total ?? 0;
     }
-    const efectivoEsperado = totalEfectivo + sesion.montoInicial;
+    const cantidadPedidos = pedidosCobrados.length;
+    const [mesasPendientes] = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} in ('en_pago', 'lista_cobro', 'ocupada')`);
+    if ((mesasPendientes?.count ?? 0) > 0) {
+      const mesasCobradas = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} = 'en_pago'`);
+      const mesasPorCobrar = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} = 'lista_cobro'`);
+      const mesasOcupadas = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} = 'ocupada'`);
+      res.status(400).json({
+        error: "Hay mesas pendientes de cierre",
+        detalle: `${mesasCobradas[0]?.count ?? 0} mesa(s) EN PAGO + ${mesasPorCobrar[0]?.count ?? 0} lista cobro + ${mesasOcupadas[0]?.count ?? 0} ocupada(s). Ci\xE9rralas antes de cerrar caja.`,
+        mesasEnPago: mesasCobradas[0]?.count ?? 0,
+        mesasListaCobro: mesasPorCobrar[0]?.count ?? 0,
+        mesasAbiertas: mesasOcupadas[0]?.count ?? 0
+      });
+      return;
+    }
+    const efectivoEsperado = sesion.montoInicial + totalEfectivo + totalPropinas;
     const diferencia = parsed.data.efectivoContado - efectivoEsperado;
+    const cierreEn = /* @__PURE__ */ new Date();
     const [sesionCerrada] = await db.update(cajaSesionesTable).set({
-      cierreEn: /* @__PURE__ */ new Date(),
+      cierreEn,
       totalEfectivo,
+      totalTarjeta,
       totalTransferencia,
       totalPropinas,
+      totalVentas,
+      cantidadPedidos,
       diferencia,
       estado: "cerrada",
       notas: parsed.data.notas ?? sesion.notas
     }).where(eq(cajaSesionesTable.id, sesion.id)).returning();
+    await db.insert(cajaHistorialTable).values({
+      fecha: cierreEn,
+      usuarioId: sesion.usuarioId,
+      usuarioNombre: sesion.usuarioNombre,
+      montoInicial: sesion.montoInicial,
+      totalEfectivo,
+      totalTarjeta,
+      totalTransferencia,
+      totalPropinas,
+      totalVentas,
+      cantidadPedidos,
+      diferencia,
+      notas: parsed.data.notas ?? sesion.notas ?? `Cierre de caja \xB7 ${cantidadPedidos} pedidos cobrados`,
+      tipo: "cierre"
+    }).catch(() => {
+    });
     res.json({
       ...sesionCerrada,
-      pedidosCobrados: pedidosCobrados.length,
+      pedidosCobrados: cantidadPedidos,
+      totalVentas,
       efectivoEsperado,
       efectivoContado: parsed.data.efectivoContado
     });
@@ -57965,6 +58261,7 @@ router11.get("/caja/resumen-dia", requireAuth, requireRol("admin", "caja"), asyn
       gte(pedidosTable.cobradoEn, inicio)
     ));
     let totalEfectivo = 0;
+    let totalTarjeta = 0;
     let totalTransferencia = 0;
     let totalPropinas = 0;
     let totalVentas = 0;
@@ -57972,21 +58269,41 @@ router11.get("/caja/resumen-dia", requireAuth, requireRol("admin", "caja"), asyn
       const pagos = Array.isArray(p.pagos) ? p.pagos : [];
       for (const pago of pagos) {
         if (pago.metodo === "efectivo") totalEfectivo += pago.monto;
+        else if (pago.metodo === "tarjeta") totalTarjeta += pago.monto;
         else if (pago.metodo === "transferencia") totalTransferencia += pago.monto;
       }
       totalPropinas += p.propina ?? 0;
       totalVentas += p.total ?? 0;
     }
+    const [mesasCobradas] = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} in ('lista_cobro', 'en_pago')`);
+    const [mesasAbiertas] = await db.select({ count: sql`cast(count(*) as int)` }).from(mesasTable).where(sql`${mesasTable.estado} = 'ocupada'`);
     res.json({
       totalVentas,
       totalEfectivo,
+      totalTarjeta,
       totalTransferencia,
       totalPropinas,
       pedidosCobrados: pedidosCobrados.length,
-      total: totalEfectivo + totalTransferencia
+      total: totalEfectivo + totalTarjeta + totalTransferencia,
+      mesasCobradas: mesasCobradas?.count ?? 0,
+      mesasAbiertas: mesasAbiertas?.count ?? 0
     });
   } catch (e) {
     req.log.error(e, "Error en resumen del d\xEDa");
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+router11.get("/caja/pedidos-dia", requireAuth, requireRol("admin", "caja"), async (req, res) => {
+  try {
+    const [sesion] = await db.select().from(cajaSesionesTable).where(eq(cajaSesionesTable.estado, "abierta")).orderBy(desc(cajaSesionesTable.aperturaEn)).limit(1);
+    const desde = sesion ? sesion.aperturaEn : inicioDelDia2();
+    const pedidos = await db.select().from(pedidosTable).where(and(
+      eq(pedidosTable.estado, "cobrado"),
+      gte(pedidosTable.cobradoEn, desde)
+    )).orderBy(desc(pedidosTable.cobradoEn));
+    res.json(pedidos);
+  } catch (e) {
+    req.log.error(e, "Error al obtener pedidos del d\xEDa");
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });

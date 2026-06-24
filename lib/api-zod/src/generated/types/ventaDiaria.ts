@@ -11,5 +11,6 @@ export interface VentaDiaria {
   ventas: number;
   pedidos: number;
   efectivo: number;
+  tarjeta: number;
   transferencia: number;
 }

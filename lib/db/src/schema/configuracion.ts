@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,6 +15,7 @@ export const configuracionTable = pgTable("configuracion", {
   ciudad: text("ciudad").default(""),
   moneda: text("moneda").notNull().default("COP"),
   prefijoFactura: text("prefijo_factura").default("F"),
+  ultimoNumeroFactura: integer("ultimo_numero_factura").default(0),
   mensajeFactura: text("mensaje_factura").default("¡Gracias por tu visita!"),
   configurado: boolean("configurado").notNull().default(false),
   creadoEn: timestamp("creado_en").defaultNow().notNull(),

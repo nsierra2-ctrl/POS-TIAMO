@@ -10,6 +10,7 @@ export interface VentaDiaria {
     ventas: number;
     pedidos: number;
     efectivo: number;
+    tarjeta: number;
     transferencia: number;
 }
 //# sourceMappingURL=ventaDiaria.d.ts.map

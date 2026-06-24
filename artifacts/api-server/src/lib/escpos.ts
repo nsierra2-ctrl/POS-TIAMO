@@ -120,7 +120,8 @@ export interface EscPosPedido {
 }
 
 export interface EscPosFactura extends EscPosPedido {
-  pagos: { metodo: string; monto: number }[];
+  numeroFactura?: string | null;
+  pagos: { metodo: string; monto: number; tipoTarjeta?: string; banco?: string; referencia?: string; ultimos4?: string }[];
   propina: number;
   totalConPropina: number;
   cambio: number;
@@ -197,9 +198,13 @@ export function buildEscPosFactura(p: EscPosFactura): Buffer {
     return line;
   }).join("\n");
 
-  const pagosTxt = p.pagos.map((pg) =>
-    padLine(pg.metodo === "efectivo" ? "Efectivo:" : "Transferencia:", fmtPrice(pg.monto)),
-  ).join("\n");
+  const pagosTxt = p.pagos.map((pg) => {
+    let label = pg.metodo === "efectivo" ? "Efectivo:" : pg.metodo === "tarjeta" ? "Tarjeta:" : "Transferencia:";
+    if (pg.metodo === "tarjeta" && pg.tipoTarjeta) {
+      label += ` (${pg.tipoTarjeta})`;
+    }
+    return padLine(label, fmtPrice(pg.monto));
+  }).join("\n");
 
   const parts: (Buffer | string)[] = [
     CMD.init,
@@ -211,18 +216,22 @@ export function buildEscPosFactura(p: EscPosFactura): Buffer {
     CMD.alignCenter, CMD.boldOn,
     "Sistema POS v3", "\n",
     CMD.boldOff,
-    CMD.alignCenter,
+    CMD.alignCenter, CMD.boldOn,
     "Tel:3219600269", "\n",
+    CMD.boldOff,
     divider("="), "\n",
     CMD.alignCenter, CMD.boldOn, CMD.doubleHeightOn,
     "FACTURA VENTA", "\n",
     CMD.normalSize, CMD.boldOff,
     CMD.alignCenter, CMD.boldOn,
-    `#${String(p.id).padStart(4, "0")} Mesa${p.mesa}`, "\n",
+    p.numeroFactura ? `N° ${p.numeroFactura}` : `#${String(p.id).padStart(4, "0")}`, "\n",
+    `Mesa ${p.mesa}`, "\n",
     CMD.boldOff,
     divider("="), "\n",
     CMD.alignLeft,
+    CMD.boldOn,
     `${fecha} ${hora}`, "\n",
+    CMD.boldOff,
     CMD.boldOn,
     `Mesero:${p.mesero ?? "-"}`, "\n",
     `Cajero:${p.cobradoPor ?? "-"}`, "\n",

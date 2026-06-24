@@ -237,38 +237,38 @@ export declare const EliminarUsuarioResponse: zod.ZodObject<{
  */
 export declare const GetMesasResponseItem: zod.ZodObject<{
     numero: zod.ZodString;
-    estado: zod.ZodEnum<["libre", "ocupada", "proceso"]>;
+    estado: zod.ZodEnum<["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"]>;
     personas: zod.ZodNumber;
     nombre: zod.ZodOptional<zod.ZodString>;
     zona: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
 }, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
 }>;
 export declare const GetMesasResponse: zod.ZodArray<zod.ZodObject<{
     numero: zod.ZodString;
-    estado: zod.ZodEnum<["libre", "ocupada", "proceso"]>;
+    estado: zod.ZodEnum<["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"]>;
     personas: zod.ZodNumber;
     nombre: zod.ZodOptional<zod.ZodString>;
     zona: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
 }, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
@@ -303,36 +303,36 @@ export declare const ActualizarMesaParams: zod.ZodObject<{
     numero: string;
 }>;
 export declare const ActualizarMesaBody: zod.ZodObject<{
-    estado: zod.ZodOptional<zod.ZodEnum<["libre", "ocupada", "proceso"]>>;
+    estado: zod.ZodOptional<zod.ZodEnum<["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"]>>;
     personas: zod.ZodOptional<zod.ZodNumber>;
     nombre: zod.ZodOptional<zod.ZodString>;
     zona: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     nombre?: string | undefined;
-    estado?: "libre" | "ocupada" | "proceso" | undefined;
+    estado?: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada" | undefined;
     personas?: number | undefined;
     zona?: string | undefined;
 }, {
     nombre?: string | undefined;
-    estado?: "libre" | "ocupada" | "proceso" | undefined;
+    estado?: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada" | undefined;
     personas?: number | undefined;
     zona?: string | undefined;
 }>;
 export declare const ActualizarMesaResponse: zod.ZodObject<{
     numero: zod.ZodString;
-    estado: zod.ZodEnum<["libre", "ocupada", "proceso"]>;
+    estado: zod.ZodEnum<["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"]>;
     personas: zod.ZodNumber;
     nombre: zod.ZodOptional<zod.ZodString>;
     zona: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
 }, {
     numero: string;
-    estado: "libre" | "ocupada" | "proceso";
+    estado: "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada";
     personas: number;
     nombre?: string | undefined;
     zona?: string | undefined;
@@ -617,14 +617,26 @@ export declare const GetPedidosResponseItem: zod.ZodObject<{
     meseroId: zod.ZodOptional<zod.ZodNumber>;
     metodoPago: zod.ZodEnum<["efectivo", "transferencia", "mixto", "pendiente"]>;
     pagos: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">>;
     propina: zod.ZodNumber;
     cobradoEn: zod.ZodOptional<zod.ZodDate>;
@@ -688,8 +700,12 @@ export declare const GetPedidosResponseItem: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -727,8 +743,12 @@ export declare const GetPedidosResponseItem: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -779,14 +799,26 @@ export declare const GetPedidosResponse: zod.ZodArray<zod.ZodObject<{
     meseroId: zod.ZodOptional<zod.ZodNumber>;
     metodoPago: zod.ZodEnum<["efectivo", "transferencia", "mixto", "pendiente"]>;
     pagos: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">>;
     propina: zod.ZodNumber;
     cobradoEn: zod.ZodOptional<zod.ZodDate>;
@@ -850,8 +882,12 @@ export declare const GetPedidosResponse: zod.ZodArray<zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -889,8 +925,12 @@ export declare const GetPedidosResponse: zod.ZodArray<zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -1008,14 +1048,26 @@ export declare const GetPedidoResponse: zod.ZodObject<{
     meseroId: zod.ZodOptional<zod.ZodNumber>;
     metodoPago: zod.ZodEnum<["efectivo", "transferencia", "mixto", "pendiente"]>;
     pagos: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">>;
     propina: zod.ZodNumber;
     cobradoEn: zod.ZodOptional<zod.ZodDate>;
@@ -1079,8 +1131,12 @@ export declare const GetPedidoResponse: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -1118,8 +1174,12 @@ export declare const GetPedidoResponse: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -1193,14 +1253,26 @@ export declare const ActualizarPedidoResponse: zod.ZodObject<{
     meseroId: zod.ZodOptional<zod.ZodNumber>;
     metodoPago: zod.ZodEnum<["efectivo", "transferencia", "mixto", "pendiente"]>;
     pagos: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">>;
     propina: zod.ZodNumber;
     cobradoEn: zod.ZodOptional<zod.ZodDate>;
@@ -1264,8 +1336,12 @@ export declare const ActualizarPedidoResponse: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -1303,8 +1379,12 @@ export declare const ActualizarPedidoResponse: zod.ZodObject<{
     notas?: string | undefined;
     meseroId?: number | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     cobradoEn?: Date | undefined;
     cobradoPor?: number | undefined;
@@ -1353,45 +1433,83 @@ export declare const CobrarPedidoParams: zod.ZodObject<{
 }>;
 export declare const CobrarPedidoBody: zod.ZodObject<{
     pagos: zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">;
     propina: zod.ZodOptional<zod.ZodNumber>;
+    propinaSugerida: zod.ZodOptional<zod.ZodNumber>;
+    propinaAceptada: zod.ZodOptional<zod.ZodNumber>;
     nota: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     pagos: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[];
     propina?: number | undefined;
     nota?: string | undefined;
+    propinaSugerida?: number | undefined;
+    propinaAceptada?: number | undefined;
 }, {
     pagos: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[];
     propina?: number | undefined;
     nota?: string | undefined;
+    propinaSugerida?: number | undefined;
+    propinaAceptada?: number | undefined;
 }>;
 export declare const CobrarPedidoResponse: zod.ZodObject<{
     id: zod.ZodNumber;
     estado: zod.ZodString;
     metodoPago: zod.ZodOptional<zod.ZodString>;
     pagos: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
-        metodo: zod.ZodEnum<["efectivo", "transferencia"]>;
+        metodo: zod.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
         monto: zod.ZodNumber;
+        tipoTarjeta: zod.ZodOptional<zod.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: zod.ZodOptional<zod.ZodString>;
+        referencia: zod.ZodOptional<zod.ZodString>;
+        ultimos4: zod.ZodOptional<zod.ZodString>;
     }, "strip", zod.ZodTypeAny, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }, {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }>, "many">>;
     propina: zod.ZodOptional<zod.ZodNumber>;
     cambio: zod.ZodNumber;
@@ -1422,8 +1540,12 @@ export declare const CobrarPedidoResponse: zod.ZodObject<{
     cambio: number;
     metodoPago?: string | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     propina?: number | undefined;
     cobradoEn?: string | undefined;
@@ -1441,8 +1563,12 @@ export declare const CobrarPedidoResponse: zod.ZodObject<{
     cambio: number;
     metodoPago?: string | undefined;
     pagos?: {
-        metodo: "efectivo" | "transferencia";
+        metodo: "efectivo" | "transferencia" | "tarjeta";
         monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
     }[] | undefined;
     propina?: number | undefined;
     cobradoEn?: string | undefined;
@@ -1490,6 +1616,7 @@ export declare const GetResumenGeneralResponse: zod.ZodObject<{
     crecimientoSemana: zod.ZodNumber;
     tiempoPromedioMin: zod.ZodNumber;
     efectivoHoy: zod.ZodNumber;
+    tarjetaHoy: zod.ZodNumber;
     transferenciaHoy: zod.ZodNumber;
     propinasHoy: zod.ZodNumber;
 }, "strip", zod.ZodTypeAny, {
@@ -1502,6 +1629,7 @@ export declare const GetResumenGeneralResponse: zod.ZodObject<{
     crecimientoSemana: number;
     tiempoPromedioMin: number;
     efectivoHoy: number;
+    tarjetaHoy: number;
     transferenciaHoy: number;
     propinasHoy: number;
 }, {
@@ -1514,6 +1642,7 @@ export declare const GetResumenGeneralResponse: zod.ZodObject<{
     crecimientoSemana: number;
     tiempoPromedioMin: number;
     efectivoHoy: number;
+    tarjetaHoy: number;
     transferenciaHoy: number;
     propinasHoy: number;
 }>;
@@ -1525,16 +1654,19 @@ export declare const GetVentasDiariasResponseItem: zod.ZodObject<{
     ventas: zod.ZodNumber;
     pedidos: zod.ZodNumber;
     efectivo: zod.ZodNumber;
+    tarjeta: zod.ZodNumber;
     transferencia: zod.ZodNumber;
 }, "strip", zod.ZodTypeAny, {
     efectivo: number;
     transferencia: number;
+    tarjeta: number;
     fecha: string;
     ventas: number;
     pedidos: number;
 }, {
     efectivo: number;
     transferencia: number;
+    tarjeta: number;
     fecha: string;
     ventas: number;
     pedidos: number;
@@ -1544,16 +1676,19 @@ export declare const GetVentasDiariasResponse: zod.ZodArray<zod.ZodObject<{
     ventas: zod.ZodNumber;
     pedidos: zod.ZodNumber;
     efectivo: zod.ZodNumber;
+    tarjeta: zod.ZodNumber;
     transferencia: zod.ZodNumber;
 }, "strip", zod.ZodTypeAny, {
     efectivo: number;
     transferencia: number;
+    tarjeta: number;
     fecha: string;
     ventas: number;
     pedidos: number;
 }, {
     efectivo: number;
     transferencia: number;
+    tarjeta: number;
     fecha: string;
     ventas: number;
     pedidos: number;
@@ -1833,6 +1968,7 @@ export declare const GetCajaSesionesResponse: zod.ZodArray<zod.ZodObject<{
 export declare const GetCajaResumenDiaResponse: zod.ZodObject<{
     totalVentas: zod.ZodNumber;
     totalEfectivo: zod.ZodNumber;
+    totalTarjeta: zod.ZodNumber;
     totalTransferencia: zod.ZodNumber;
     totalPropinas: zod.ZodNumber;
     pedidosCobrados: zod.ZodNumber;
@@ -1844,6 +1980,7 @@ export declare const GetCajaResumenDiaResponse: zod.ZodObject<{
     totalPropinas: number;
     pedidosCobrados: number;
     totalVentas: number;
+    totalTarjeta: number;
 }, {
     total: number;
     totalEfectivo: number;
@@ -1851,6 +1988,7 @@ export declare const GetCajaResumenDiaResponse: zod.ZodObject<{
     totalPropinas: number;
     pedidosCobrados: number;
     totalVentas: number;
+    totalTarjeta: number;
 }>;
 /**
  * @summary Obtener configuración de impresora

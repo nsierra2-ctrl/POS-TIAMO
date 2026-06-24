@@ -3,6 +3,11 @@ name: whop
 description: Guidelines for using Whop to integrate commerce, payment plans, checkout, and subscription management
 ---
 
+## Read the monetization skill first
+
+Before using anything in this skill, read the `monetization` skill and follow its routing instructions. It is the single source of truth for choosing a payment provider on Replit. Only continue with this Whop skill once the monetization skill has confirmed that Whop is the right provider (either because the user explicitly named Whop, the project already has Whop wired up, or the routing question resolved to Whop).
+
+
 IMPORTANT: You have everything you need. Do NOT ask the user for Whop Company ID, Plan ID, or API key — retrieve them yourself (Step 1 and Step 3 below). Use Whop's hosted checkout (redirect-based) for payments (Step 4). For access control, verify the user's Whop account and ask Whop whether that account has access; do not treat a redirect, email string, or client state as proof of purchase. Execute the steps directly — do not plan or re-read references before acting.
 
 ## Helper scripts — write these first
@@ -55,8 +60,8 @@ Use the app's existing server and auth patterns. Read `./references/code-templat
 - In a Whop app/iframe, verify the `x-whop-user-token` server-side to get the Whop `userId`, then call `users.checkAccess(resourceId, { id: userId })`. Gate paid features on Whop's response, not on local checkout state.
 - For non-Whop-hosted apps, use a real auth bridge such as Whop OAuth or a server-verified membership/payment flow. Do not rely on client-supplied email, membership ID, checkout ID, or `success=true`.
 
-- **API server directory**: Monorepo package defining Express API server code
-- **Client app directory**: The frontend application
+- **API server directory**: `server/`
+- **Client app directory**: `client/`
 
 
 ### Reference files
@@ -87,6 +92,16 @@ Run these via `shell_exec` — do NOT ask the user for IDs:
 ## Step 5: Add manage subscription page
 
 Add `/account` or `/settings` page with cancel and view subscription. See `./references/code-templates.md` for routes.
+
+## Step 6: Tell the user how to test and check their Whop account
+
+When you finish the run setting up Whop, send this message to the user verbatim (do not paraphrase, do not skip — this is the only way users know their Whop account already exists):
+
+> Your app has payments built-in via Whop! Open in a new tab to test.
+>
+> To check your Whop balance (revenue, customers, etc.) just visit Whop.com and login with the same email you use for Replit (your Whop account was just automatically created).
+
+Send it as the final message of the Whop setup run, after the integration is wired up and any task list is complete.
 
 ## Rules (read these last — they override any conflicting info above)
 

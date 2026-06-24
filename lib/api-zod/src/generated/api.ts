@@ -116,7 +116,13 @@ export const EliminarUsuarioResponse = zod.object({
  */
 export const GetMesasResponseItem = zod.object({
   numero: zod.string(),
-  estado: zod.enum(["libre", "ocupada", "proceso"]),
+  estado: zod.enum([
+    "libre",
+    "ocupada",
+    "lista_cobro",
+    "en_pago",
+    "finalizada",
+  ]),
   personas: zod.number(),
   nombre: zod.string().optional(),
   zona: zod.string().optional(),
@@ -141,7 +147,9 @@ export const ActualizarMesaParams = zod.object({
 });
 
 export const ActualizarMesaBody = zod.object({
-  estado: zod.enum(["libre", "ocupada", "proceso"]).optional(),
+  estado: zod
+    .enum(["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"])
+    .optional(),
   personas: zod.number().optional(),
   nombre: zod.string().optional(),
   zona: zod.string().optional(),
@@ -149,7 +157,13 @@ export const ActualizarMesaBody = zod.object({
 
 export const ActualizarMesaResponse = zod.object({
   numero: zod.string(),
-  estado: zod.enum(["libre", "ocupada", "proceso"]),
+  estado: zod.enum([
+    "libre",
+    "ocupada",
+    "lista_cobro",
+    "en_pago",
+    "finalizada",
+  ]),
   personas: zod.number(),
   nombre: zod.string().optional(),
   zona: zod.string().optional(),
@@ -278,8 +292,21 @@ export const GetPedidosResponseItem = zod.object({
   pagos: zod
     .array(
       zod.object({
-        metodo: zod.enum(["efectivo", "transferencia"]),
+        metodo: zod.enum(["efectivo", "tarjeta", "transferencia"]),
         monto: zod.number(),
+        tipoTarjeta: zod
+          .enum([
+            "debito",
+            "credito",
+            "datafono",
+            "daviplata",
+            "nequi",
+            "boton_bancolombia",
+          ])
+          .optional(),
+        banco: zod.string().optional(),
+        referencia: zod.string().optional(),
+        ultimos4: zod.string().optional(),
       }),
     )
     .optional(),
@@ -364,8 +391,21 @@ export const GetPedidoResponse = zod.object({
   pagos: zod
     .array(
       zod.object({
-        metodo: zod.enum(["efectivo", "transferencia"]),
+        metodo: zod.enum(["efectivo", "tarjeta", "transferencia"]),
         monto: zod.number(),
+        tipoTarjeta: zod
+          .enum([
+            "debito",
+            "credito",
+            "datafono",
+            "daviplata",
+            "nequi",
+            "boton_bancolombia",
+          ])
+          .optional(),
+        banco: zod.string().optional(),
+        referencia: zod.string().optional(),
+        ultimos4: zod.string().optional(),
       }),
     )
     .optional(),
@@ -437,8 +477,21 @@ export const ActualizarPedidoResponse = zod.object({
   pagos: zod
     .array(
       zod.object({
-        metodo: zod.enum(["efectivo", "transferencia"]),
+        metodo: zod.enum(["efectivo", "tarjeta", "transferencia"]),
         monto: zod.number(),
+        tipoTarjeta: zod
+          .enum([
+            "debito",
+            "credito",
+            "datafono",
+            "daviplata",
+            "nequi",
+            "boton_bancolombia",
+          ])
+          .optional(),
+        banco: zod.string().optional(),
+        referencia: zod.string().optional(),
+        ultimos4: zod.string().optional(),
       }),
     )
     .optional(),
@@ -495,11 +548,26 @@ export const CobrarPedidoParams = zod.object({
 export const CobrarPedidoBody = zod.object({
   pagos: zod.array(
     zod.object({
-      metodo: zod.enum(["efectivo", "transferencia"]),
+      metodo: zod.enum(["efectivo", "tarjeta", "transferencia"]),
       monto: zod.number(),
+      tipoTarjeta: zod
+        .enum([
+          "debito",
+          "credito",
+          "datafono",
+          "daviplata",
+          "nequi",
+          "boton_bancolombia",
+        ])
+        .optional(),
+      banco: zod.string().optional(),
+      referencia: zod.string().optional(),
+      ultimos4: zod.string().optional(),
     }),
   ),
   propina: zod.number().optional(),
+  propinaSugerida: zod.number().optional(),
+  propinaAceptada: zod.number().optional(),
   nota: zod.string().optional(),
 });
 
@@ -510,8 +578,21 @@ export const CobrarPedidoResponse = zod.object({
   pagos: zod
     .array(
       zod.object({
-        metodo: zod.enum(["efectivo", "transferencia"]),
+        metodo: zod.enum(["efectivo", "tarjeta", "transferencia"]),
         monto: zod.number(),
+        tipoTarjeta: zod
+          .enum([
+            "debito",
+            "credito",
+            "datafono",
+            "daviplata",
+            "nequi",
+            "boton_bancolombia",
+          ])
+          .optional(),
+        banco: zod.string().optional(),
+        referencia: zod.string().optional(),
+        ultimos4: zod.string().optional(),
       }),
     )
     .optional(),
@@ -557,6 +638,7 @@ export const GetResumenGeneralResponse = zod.object({
   crecimientoSemana: zod.number(),
   tiempoPromedioMin: zod.number(),
   efectivoHoy: zod.number(),
+  tarjetaHoy: zod.number(),
   transferenciaHoy: zod.number(),
   propinasHoy: zod.number(),
 });
@@ -569,6 +651,7 @@ export const GetVentasDiariasResponseItem = zod.object({
   ventas: zod.number(),
   pedidos: zod.number(),
   efectivo: zod.number(),
+  tarjeta: zod.number(),
   transferencia: zod.number(),
 });
 export const GetVentasDiariasResponse = zod.array(GetVentasDiariasResponseItem);
@@ -677,6 +760,7 @@ export const GetCajaSesionesResponse = zod.array(GetCajaSesionesResponseItem);
 export const GetCajaResumenDiaResponse = zod.object({
   totalVentas: zod.number(),
   totalEfectivo: zod.number(),
+  totalTarjeta: zod.number(),
   totalTransferencia: zod.number(),
   totalPropinas: zod.number(),
   pedidosCobrados: zod.number(),

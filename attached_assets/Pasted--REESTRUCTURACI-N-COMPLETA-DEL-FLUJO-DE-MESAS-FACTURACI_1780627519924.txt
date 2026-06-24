@@ -1,0 +1,379 @@
+# REESTRUCTURACIÓN COMPLETA DEL FLUJO DE MESAS, FACTURACIÓN, CAJA Y REPORTES DEL POS
+
+## Problema Actual
+
+El sistema actualmente muestra estados como:
+
+* Mesa cobrada
+* Pendiente de cierre manual
+
+Esta lógica es incorrecta y genera inconsistencias operativas.
+
+Actualmente la mesa puede quedar en estados intermedios que no reflejan el proceso real de atención al cliente.
+
+---
+
+# NUEVO FLUJO OBLIGATORIO
+
+## 1. Estado de Mesa
+
+Las mesas únicamente deben tener los siguientes estados:
+
+### Disponible
+
+Mesa libre.
+
+### Ocupada
+
+Mesa con productos agregados.
+
+### Lista para Cobro
+
+Cuando el cliente solicita la cuenta.
+
+### En Proceso de Pago
+
+Mientras el mesero realiza el cobro.
+
+### Finalizada
+
+Únicamente después de completar todo el proceso de pago, facturación y registro de propina.
+
+---
+
+# 2. MÓDULO DE COBRO
+
+Cuando se presione "Cobrar Mesa", NO debe aparecer:
+
+* Mesa cobrada
+* Pendiente de cierre manual
+
+En su lugar debe abrirse una ventana profesional de pago.
+
+## Debe permitir:
+
+### Pago en efectivo
+
+Ingresar:
+
+* Total a pagar
+* Dinero recibido
+* Cambio a devolver
+
+Cálculo automático.
+
+---
+
+### Pago con tarjeta
+
+Registrar:
+
+* Valor
+* Tipo de tarjeta
+* Referencia opcional
+
+---
+
+### Pago por transferencia
+
+Registrar:
+
+* Valor
+* Banco
+* Referencia
+
+---
+
+### Pago mixto
+
+Ejemplo:
+
+* Efectivo: $30.000
+* Tarjeta: $20.000
+
+El sistema debe validar automáticamente que el total coincida.
+
+---
+
+# 3. DIVISIÓN DE CUENTA
+
+Implementar:
+
+### Dividir por personas
+
+Ejemplo:
+
+4 personas.
+
+Sistema divide automáticamente.
+
+---
+
+### Dividir manualmente
+
+Seleccionar productos específicos para cada cliente.
+
+Ejemplo:
+
+Cliente 1 paga:
+
+* Hamburguesa
+* Gaseosa
+
+Cliente 2 paga:
+
+* Pizza
+* Cerveza
+
+Cada uno genera su factura.
+
+---
+
+# 4. MANEJO DE PROPINA
+
+Antes de finalizar el pago debe aparecer:
+
+## Propina sugerida
+
+Botones rápidos:
+
+* 0%
+* 5%
+* 10%
+* 15%
+* 20%
+
+Y campo personalizado.
+
+Registrar:
+
+* Propina sugerida
+* Propina aceptada
+* Propina rechazada
+
+La propina debe almacenarse en base de datos.
+
+---
+
+# 5. FACTURACIÓN
+
+Una vez confirmado el pago:
+
+Generar automáticamente factura con:
+
+* Número de factura
+* Fecha
+* Hora
+* Mesa
+* Mesero
+* Productos
+* Cantidades
+* Subtotal
+* Impuestos
+* Total
+* Método de pago
+* Propina
+* Cambio entregado
+
+---
+
+# 6. IMPRESIÓN
+
+La impresión NO debe ser automática.
+
+Después de generar la factura:
+
+Mostrar opciones:
+
+* Imprimir factura
+* Descargar PDF
+* Enviar por WhatsApp
+* Enviar por correo
+* Cerrar
+
+---
+
+# 7. LIBERACIÓN DE MESA
+
+La mesa NO puede liberarse cuando se presiona cobrar.
+
+La mesa solamente se libera cuando:
+
+✓ Pago completado
+
+✓ Factura generada
+
+✓ Propina registrada
+
+✓ Transacción guardada
+
+Después:
+
+Estado = Disponible
+
+---
+
+# 8. DASHBOARD EN TIEMPO REAL
+
+Todo el dashboard debe actualizarse automáticamente sin recargar.
+
+Actualizar:
+
+* Ventas del día
+* Ventas del mes
+* Productos vendidos
+* Mesas atendidas
+* Ticket promedio
+* Propinas
+* Efectivo
+* Tarjeta
+* Transferencias
+* Pagos mixtos
+* Número de clientes
+
+Implementar actualización en tiempo real mediante WebSockets o eventos reactivos.
+
+---
+
+# 9. MÓDULO DE CAJA
+
+La caja debe funcionar como una caja registradora real.
+
+## Al agregar productos
+
+Registrar inmediatamente:
+
+* Producto
+* Cantidad
+* Valor
+
+Como movimiento provisional.
+
+---
+
+## Al finalizar venta
+
+Convertir movimiento provisional en movimiento definitivo.
+
+---
+
+## Caja debe mostrar
+
+### Ingresos por:
+
+* Efectivo
+* Tarjeta
+* Transferencias
+* Mixtos
+
+### Propinas
+
+Separadas del ingreso principal.
+
+### Ventas
+
+Por:
+
+* Hora
+* Día
+* Semana
+* Mes
+
+---
+
+# 10. CUADRE DE CAJA
+
+El cierre debe incluir:
+
+## Ventas Totales
+
+## Total Efectivo
+
+## Total Tarjetas
+
+## Total Transferencias
+
+## Total Mixtos
+
+## Total Propinas
+
+## Total Impuestos
+
+## Productos vendidos
+
+## Cantidades vendidas
+
+## Mesas atendidas
+
+## Facturas emitidas
+
+## Anulaciones
+
+## Descuentos aplicados
+
+## Diferencias de caja
+
+Todo debe coincidir exactamente con las transacciones almacenadas.
+
+---
+
+# 11. REPORTES PDF
+
+Actualmente los reportes no reflejan toda la información.
+
+Corregir para incluir:
+
+## Ventas
+
+* Diarias
+* Semanales
+* Mensuales
+
+## Productos
+
+* Más vendidos
+* Menos vendidos
+
+## Métodos de pago
+
+* Efectivo
+* Tarjeta
+* Transferencia
+* Mixto
+
+## Propinas
+
+* Total
+* Promedio
+
+## Meseros
+
+* Ventas por mesero
+* Propinas por mesero
+
+## Mesas
+
+* Rotación
+* Tiempo promedio de ocupación
+
+## Utilidad
+
+* Ingresos
+* Costos
+* Margen
+
+Todos los PDF deben generarse con datos actualizados en tiempo real y coincidir exactamente con el dashboard y la caja.
+
+---
+
+# REQUISITO CRÍTICO
+
+Antes de programar cualquier cambio:
+
+1. Analizar la lógica original del sistema.
+2. Identificar cómo funcionaba el flujo anterior.
+3. Corregir sin romper módulos existentes.
+4. Mantener compatibilidad con inventario, pedidos, cocina, caja y reportes.
+5. Entregar solución completamente funcional, no simulada ni visual.
+6. Verificar que cada operación actualice automáticamente Base de Datos → Caja → Dashboard → Reportes → Facturación.
+7. Realizar pruebas de flujo completo desde apertura de mesa hasta cierre y liberación.

@@ -913,7 +913,7 @@ components:
 
     EstadoMesa:
       type: string
-      enum: [libre, ocupada, proceso]
+      enum: [libre, ocupada, lista_cobro, en_pago, finalizada]
 
     EstadoPedido:
       type: string
@@ -1000,9 +1000,18 @@ components:
       properties:
         metodo:
           type: string
-          enum: [efectivo, transferencia]
+          enum: [efectivo, tarjeta, transferencia]
         monto:
           type: integer
+        tipoTarjeta:
+          type: string
+          enum: [debito, credito, datafono, daviplata, nequi, boton_bancolombia]
+        banco:
+          type: string
+        referencia:
+          type: string
+        ultimos4:
+          type: string
       required: [metodo, monto]
 
     HistorialEstado:
@@ -1215,6 +1224,10 @@ components:
             $ref: "#/components/schemas/Pago"
         propina:
           type: integer
+        propinaSugerida:
+          type: integer
+        propinaAceptada:
+          type: integer
         nota:
           type: string
       required: [pagos]
@@ -1281,11 +1294,13 @@ components:
           type: integer
         efectivoHoy:
           type: integer
+        tarjetaHoy:
+          type: integer
         transferenciaHoy:
           type: integer
         propinasHoy:
           type: integer
-      required: [ventasHoy, pedidosHoy, mesasOcupadas, promedioTicket, ventasSemana, pedidosSemana, crecimientoSemana, tiempoPromedioMin, efectivoHoy, transferenciaHoy, propinasHoy]
+      required: [ventasHoy, pedidosHoy, mesasOcupadas, promedioTicket, ventasSemana, pedidosSemana, crecimientoSemana, tiempoPromedioMin, efectivoHoy, tarjetaHoy, transferenciaHoy, propinasHoy]
 
     VentaDiaria:
       type: object
@@ -1298,9 +1313,11 @@ components:
           type: integer
         efectivo:
           type: integer
+        tarjeta:
+          type: integer
         transferencia:
           type: integer
-      required: [fecha, ventas, pedidos, efectivo, transferencia]
+      required: [fecha, ventas, pedidos, efectivo, tarjeta, transferencia]
 
     ProductoTop:
       type: object
@@ -1419,6 +1436,8 @@ components:
           type: integer
         totalEfectivo:
           type: integer
+        totalTarjeta:
+          type: integer
         totalTransferencia:
           type: integer
         totalPropinas:
@@ -1427,7 +1446,7 @@ components:
           type: integer
         total:
           type: integer
-      required: [totalVentas, totalEfectivo, totalTransferencia, totalPropinas, pedidosCobrados, total]
+      required: [totalVentas, totalEfectivo, totalTarjeta, totalTransferencia, totalPropinas, pedidosCobrados, total]
 
     ImpresoraConfig:
       type: object

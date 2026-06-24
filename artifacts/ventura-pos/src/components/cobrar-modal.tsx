@@ -6,10 +6,10 @@ import { useCobrarPedido, getGetPedidosQueryKey, getGetMesasQueryKey } from "@wo
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/constants";
-import { Banknote, CreditCard, Split, Check, AlertCircle, Printer, Receipt, FileText, Usb } from "lucide-react";
-import { useLocalPrinter } from "@/hooks/use-local-printer";
+import { Banknote, CreditCard, Split, Check, Printer, DoorOpen, Gift, Receipt } from "lucide-react";
 
-type MetodoPago = "efectivo" | "transferencia" | "mixto";
+type MetodoPago = "efectivo" | "tarjeta" | "transferencia" | "mixto";
+type TipoTarjeta = "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia";
 
 interface CobrarModalProps {
   pedido: {
@@ -22,299 +22,234 @@ interface CobrarModalProps {
   onClose: () => void;
 }
 
-const PROPINAS_SUGERIDAS = [
-  { label: "Sin propina", valor: 0 },
-  { label: "5%", pct: 5 },
-  { label: "10%", pct: 10 },
-  { label: "15%", pct: 15 },
-];
+const BILLETES = [1000, 2000, 5000, 10000, 20000, 50000, 100000];
 
-const BILLETES_COMUNES = [1000, 2000, 5000, 10000, 20000, 50000, 100000];
+const TIPO_TARJETA_LABELS: Record<TipoTarjeta, string> = {
+  debito: "Débito",
+  credito: "Crédito",
+  datafono: "Datáfono",
+  daviplata: "DaviPlata",
+  nequi: "Nequi",
+  boton_bancolombia: "Botón Bancolombia",
+};
 
 export function CobrarModal({ pedido, open, onClose }: CobrarModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const cobrarMutation = useCobrarPedido();
-  const localPrinter = useLocalPrinter();
 
+  // Paso 1: formulario de cobro
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
-  const [propinaPct, setPropinaPct] = useState<number | null>(0);
-  const [propinaCustom, setPropinaCustom] = useState("");
   const [efectivoStr, setEfectivoStr] = useState("");
+  const [tarjetaStr, setTarjetaStr] = useState("");
   const [transferenciaStr, setTransferenciaStr] = useState("");
-  const [resultado, setResultado] = useState<{ cambio: number } | null>(null);
-  const [exito, setExito] = useState(false);
-  const [facturaTicket, setFacturaTicket] = useState<string | null>(null);
-  const [impresionResult, setImpresionResult] = useState<{ ok: boolean; mensaje: string } | null>(null);
-  const [facturaImpresa, setFacturaImpresa] = useState(false);
+  const [tipoTarjeta, setTipoTarjeta] = useState<TipoTarjeta | null>(null);
+  const [bancoTarjeta, setBancoTarjeta] = useState("");
+  const [referenciaTarjeta, setReferenciaTarjeta] = useState("");
+  const [ultimos4Tarjeta, setUltimos4Tarjeta] = useState("");
+
+  // Paso 2: propina + cierre
+  const [paso, setPaso] = useState<1 | 2>(1);
+  const [cambioFinal, setCambioFinal] = useState(0);
+  const [pedidoCobradoId, setPedidoCobradoId] = useState<number | null>(null);
+  const [numeroFactura, setNumeroFactura] = useState<string | null>(null);
+  const [propinaStr, setPropinaStr] = useState("");
+  const [propinaPct, setPropinaPct] = useState<number | null>(null);
+  const [cerrando, setCerrando] = useState(false);
+  const [procesando, setProcesando] = useState(false);
 
   const total = pedido?.total ?? 0;
 
-  const propina = (() => {
-    if (propinaPct !== null) return Math.round(total * propinaPct / 100);
-    const v = parseInt(propinaCustom.replace(/\D/g, "") || "0");
-    return isNaN(v) ? 0 : v;
-  })();
-
-  const totalConPropina = total + propina;
-
   const efectivo = parseInt(efectivoStr.replace(/\D/g, "") || "0") || 0;
+  const tarjeta = parseInt(tarjetaStr.replace(/\D/g, "") || "0") || 0;
   const transferencia = parseInt(transferenciaStr.replace(/\D/g, "") || "0") || 0;
 
-  const montoPagado = metodo === "efectivo" ? efectivo
-    : metodo === "transferencia" ? transferencia
-    : efectivo + transferencia;
+  const montoPagado = (() => {
+    if (metodo === "efectivo") return efectivo;
+    if (metodo === "tarjeta") return tarjeta;
+    if (metodo === "transferencia") return transferencia;
+    return efectivo + tarjeta + transferencia;
+  })();
 
-  const cambio = metodo === "efectivo" ? Math.max(0, efectivo - totalConPropina) : 0;
-  const faltante = Math.max(0, totalConPropina - montoPagado);
+  const cambio = metodo === "efectivo" ? Math.max(0, efectivo - total) : 0;
+  const faltante = Math.max(0, total - montoPagado);
 
-  useEffect(() => {
-    if (!open) {
-      setMetodo("efectivo");
-      setPropinaPct(0);
-      setPropinaCustom("");
-      setEfectivoStr("");
-      setTransferenciaStr("");
-      setResultado(null);
-      setExito(false);
-      setFacturaTicket(null);
-      setImpresionResult(null);
-      setFacturaImpresa(false);
-    }
-  }, [open]);
+  const propina = (() => {
+    if (propinaPct !== null) return Math.round(total * propinaPct / 100);
+    const v = parseInt(propinaStr.replace(/\D/g, "") || "0");
+    return isNaN(v) ? 0 : v;
+  })();
+  const propinaSugerida = propinaPct !== null ? Math.round(total * propinaPct / 100) : 0;
+
+  const puedeConfirmar = (() => {
+    if (metodo === "transferencia") return true;
+    if (metodo === "tarjeta") return tarjeta >= total && tipoTarjeta !== null;
+    if (metodo === "mixto") return montoPagado >= total;
+    return montoPagado >= total;
+  })();
 
   const formatInput = (val: string) => {
     const num = val.replace(/\D/g, "");
     return num ? parseInt(num).toLocaleString("es-CO") : "";
   };
 
-  const handleCobrar = async () => {
-    if (!pedido) return;
-    if (faltante > 0) {
-      toast({ title: "Monto insuficiente", description: `Faltan ${formatPrice(faltante)}`, variant: "destructive" });
-      return;
+  useEffect(() => {
+    if (!open) {
+      setMetodo("efectivo");
+      setEfectivoStr("");
+      setTarjetaStr("");
+      setTransferenciaStr("");
+      setTipoTarjeta(null);
+      setBancoTarjeta("");
+      setReferenciaTarjeta("");
+      setUltimos4Tarjeta("");
+      setPaso(1);
+      setCambioFinal(0);
+      setPedidoCobradoId(null);
+      setNumeroFactura(null);
+      setPropinaStr("");
+      setPropinaPct(null);
+      setCerrando(false);
+      setProcesando(false);
     }
+  }, [open]);
 
-    const pagos = metodo === "efectivo"
-      ? [{ metodo: "efectivo" as const, monto: Math.min(efectivo, totalConPropina) }]
-      : metodo === "transferencia"
-      ? [{ metodo: "transferencia" as const, monto: totalConPropina }]
-      : [
-          ...(efectivo > 0 ? [{ metodo: "efectivo" as const, monto: efectivo }] : []),
-          ...(transferencia > 0 ? [{ metodo: "transferencia" as const, monto: transferencia }] : []),
-        ];
+  const abrirFactura = (id: number) => {
+    const url = `/api/pedidos/${id}/factura?autoprint=1`;
+    const win = window.open(url, "_blank");
+    if (!win) toast({ title: "Permite ventanas emergentes para imprimir", variant: "destructive" });
+  };
 
+  const handleCobrar = async () => {
+    if (!pedido || !puedeConfirmar) return;
+    setProcesando(true);
     try {
-      const r = await cobrarMutation.mutateAsync({ id: pedido.id, data: { pagos, propina, nota: `Cobrado en caja` } });
-      setResultado({ cambio: r.cambio ?? 0 });
-      const ft = (r as any).facturaTicket ?? null;
-      const imp = (r as any).impresion ?? null;
-      setFacturaTicket(ft);
-      setImpresionResult(imp);
-      setExito(true);
+      const pagos: any[] = [];
+      if (metodo === "efectivo") {
+        pagos.push({ metodo: "efectivo", monto: Math.min(efectivo, total) });
+      } else if (metodo === "tarjeta") {
+        pagos.push({
+          metodo: "tarjeta",
+          monto: total,
+          tipoTarjeta: tipoTarjeta!,
+          banco: bancoTarjeta || undefined,
+          referencia: referenciaTarjeta || undefined,
+          ultimos4: ultimos4Tarjeta || undefined,
+        });
+      } else if (metodo === "transferencia") {
+        pagos.push({ metodo: "transferencia", monto: total });
+      } else {
+        if (efectivo > 0) pagos.push({ metodo: "efectivo", monto: efectivo });
+        if (tarjeta > 0) pagos.push({
+          metodo: "tarjeta",
+          monto: tarjeta,
+          tipoTarjeta: tipoTarjeta!,
+          banco: bancoTarjeta || undefined,
+          referencia: referenciaTarjeta || undefined,
+          ultimos4: ultimos4Tarjeta || undefined,
+        });
+        if (transferencia > 0) pagos.push({ metodo: "transferencia", monto: transferencia });
+      }
+
+      const r = await cobrarMutation.mutateAsync({
+        id: pedido.id,
+        data: {
+          pagos,
+          propina: 0,
+          propinaSugerida: propinaSugerida,
+          propinaAceptada: 0,
+          nota: "Cobrado",
+        },
+      });
+
       queryClient.invalidateQueries({ queryKey: getGetPedidosQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetMesasQueryKey() });
-      toast({ title: "\u00a1Cobrado con \u00e9xito!", description: `Mesa ${pedido.mesa} \u2014 ${formatPrice(totalConPropina)}` });
-      // onSuccess NO se llama aquí — el modal debe quedar abierto
-      // para que el mesero confirme e imprima la factura manualmente
+
+      const cambioCalc = (r as any).cambio ?? Math.max(0, efectivo - total);
+      setCambioFinal(cambioCalc);
+      setPedidoCobradoId(pedido.id);
+      setNumeroFactura((r as any).numeroFactura ?? null);
+
+      // Imprimir factura automáticamente (sin propina aún)
+      abrirFactura(pedido.id);
+
+      setPaso(2);
     } catch (e: any) {
       toast({ title: "Error al cobrar", description: e?.message ?? "Error desconocido", variant: "destructive" });
+    } finally {
+      setProcesando(false);
     }
   };
 
-  const imprimirFactura = (autoPrint = true) => {
-    if (!facturaTicket) return;
-    const win = window.open("", "_blank", "width=420,height=700");
-    if (!win) {
-      toast({ title: "Permita ventanas emergentes", description: "El navegador bloqueo la ventana de impresion", variant: "destructive" });
-      return;
-    }
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura TIAMO BURGER</title><style>
-      *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;font-size:12px;width:80mm;padding:8px;background:#fff;color:#000}
-      .c{text-align:center}.t{font-size:16px;font-weight:bold}.d{border-top:1px dashed #000;margin:5px 0}
-      pre{white-space:pre;font-size:11px;line-height:1.3}
-      @media print{@page{margin:0}body{padding:4px}}
-    </style></head><body>
-      <pre>${facturaTicket.replace(/</g, "&lt;")}</pre>
-      <script>window.onload=()=>{${autoPrint ? 'setTimeout(()=>{window.print();},300);' : ''}}</script>
-    </body></html>`);
-    win.document.close();
-  };
-
-  const abrirFacturaHtml = () => {
+  const handleCerrarMesa = async (conPropina: boolean) => {
     if (!pedido) return;
-    const win = window.open(`${window.location.origin}/api/pedidos/${pedido.id}/factura?autoprint=1`, "_blank");
-    if (!win) {
-      toast({ title: "Permita ventanas emergentes para imprimir", variant: "destructive" });
+    setCerrando(true);
+    try {
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const propinaFinal = conPropina ? propina : 0;
+      const body = propinaFinal > 0
+        ? { propina: propinaFinal, propinaAceptada: propinaFinal, propinaRechazada: propinaSugerida > propinaFinal ? propinaSugerida - propinaFinal : 0 }
+        : {};
+      await fetch(`${base}/api/mesas/${encodeURIComponent(pedido.mesa)}/cerrar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      queryClient.invalidateQueries({ queryKey: getGetMesasQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetPedidosQueryKey() });
+
+      // Si hubo propina, reimprimir la factura actualizada
+      if (conPropina && propina > 0 && pedidoCobradoId) {
+        setTimeout(() => abrirFactura(pedidoCobradoId), 600);
+      }
+
+      toast({
+        title: "Mesa cerrada",
+        description: conPropina && propina > 0
+          ? `Propina ${formatPrice(propina)} registrada. Mesa ${pedido.mesa} libre.`
+          : `Mesa ${pedido.mesa} liberada.`,
+      });
+      onClose();
+    } catch {
+      toast({ title: "Error al cerrar mesa", variant: "destructive" });
+    } finally {
+      setCerrando(false);
     }
   };
 
   if (!pedido) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className={`${exito ? "sm:max-w-md" : "sm:max-w-lg"} bg-[#111] border-white/10 text-white p-0 overflow-hidden`}>
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle className="text-xl font-black flex items-center gap-2">
+    <Dialog open={open} onOpenChange={(v) => !v && !procesando && !cerrando && onClose()}>
+      <DialogContent className="sm:max-w-md bg-[#0e0e10] border-white/8 text-white p-0 overflow-hidden rounded-2xl">
+        <DialogHeader className="px-6 pt-5 pb-0">
+          <DialogTitle className="text-lg font-black flex items-center gap-2">
             <Banknote className="w-5 h-5" style={{ color: "#FF2D2D" }} />
-            {exito ? `Factura \u2014 Mesa ${pedido.mesa}` : `Cobrar \u2014 Mesa ${pedido.mesa}`}
+            {paso === 1 ? `Cobrar Mesa ${pedido.mesa}` : `Mesa ${pedido.mesa} — Cobrada`}
           </DialogTitle>
         </DialogHeader>
 
-        {exito ? (
-          <div className="flex flex-col px-6 pb-6 pt-4 gap-4">
-            {/* Paso 1: Pago exitoso */}
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
-                <Check className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white">\u00a1Pago registrado!</div>
-                <div className="text-xs text-zinc-500">Mesa {pedido.mesa} liberada</div>
-              </div>
-              {resultado && resultado.cambio > 0 && (
-                <div className="ml-auto text-right">
-                  <div className="text-[10px] text-emerald-400/70 font-bold uppercase">Cambio</div>
-                  <div className="text-lg font-black font-mono text-emerald-400">{formatPrice(resultado.cambio)}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Paso 2: Vista previa de la factura */}
-            {facturaTicket && !facturaImpresa && (
-              <div className="rounded-xl border border-white/5 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/3 border-b border-white/5">
-                  <Receipt className="w-3.5 h-3.5 text-zinc-500" />
-                  <span className="text-xs font-bold text-zinc-500">Vista Previa - Factura del Cliente</span>
-                </div>
-                <div className="bg-white p-3 overflow-auto max-h-[240px]">
-                  <pre className="text-black font-mono text-[11px] whitespace-pre leading-tight">{facturaTicket}</pre>
-                </div>
-              </div>
-            )}
-
-            {/* Paso 3: Confirmar e imprimir (solo antes de imprimir) */}
-            {!facturaImpresa && (
-              <div className="rounded-2xl border border-white/5 p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)" }}>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Confirme e imprima la factura</p>
-
-                {/* Boton principal: Confirmar e imprimir TODO */}
-                <Button
-                  className="w-full h-12 font-bold text-sm gap-2"
-                  style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-                  onClick={async () => {
-                    if (!facturaTicket) return;
-                    // Imprimir fisica
-                    const res = await localPrinter.print(facturaTicket);
-                    if (res.ok) {
-                      toast({ title: "Factura impresa", description: res.mensaje });
-                    }
-                    // Imprimir web
-                    imprimirFactura(true);
-                    setFacturaImpresa(true);
-                  }}
-                  disabled={localPrinter.state.isPrinting}
-                >
-                  {localPrinter.state.isPrinting ? (
-                    <div className="w-4 h-4 animate-spin rounded-full border border-white/30 border-t-white mr-1" />
-                  ) : (
-                    <Printer className="w-5 h-5" />
-                  )}
-                  {localPrinter.state.isPrinting ? "Imprimiendo..." : "Confirmar e Imprimir Factura"}
-                </Button>
-
-                {/* Estado impresora */}
-                <div className="flex items-center justify-between text-[10px] text-zinc-600">
-                  <span>Impresora: {localPrinter.state.mode === "bridge" ? "Puente detectado" : localPrinter.state.mode === "usb" ? "USB conectado" : "Sin conexion"}</span>
-                  <span>{localPrinter.state.isPrinting ? "Imprimiendo..." : "Lista"}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Ya impreso - resumen + reimprimir */}
-            {facturaImpresa && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-emerald-500/8 border border-emerald-500/20 text-emerald-400">
-                  <Check className="w-3.5 h-3.5 shrink-0" />
-                  <span className="font-bold">Factura impresa exitosamente</span>
-                </div>
-
-                {/* Reimprimir opciones */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-white/10 hover:bg-white/5 text-white text-xs h-10 gap-1.5"
-                    onClick={() => imprimirFactura(true)}
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    Reimprimir Web
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-white/10 hover:bg-white/5 text-white text-xs h-10 gap-1.5"
-                    onClick={async () => {
-                      if (!facturaTicket) return;
-                      const res = await localPrinter.print(facturaTicket);
-                      if (res.ok) toast({ title: "Reimpresa", description: res.mensaje });
-                      else toast({ title: "No se pudo reimprimir", description: res.mensaje, variant: "destructive" });
-                    }}
-                    disabled={localPrinter.state.isPrinting}
-                  >
-                    <Usb className="w-3.5 h-3.5" />
-                    Reimpr. Fisica
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <Button className="w-full h-12 font-bold" onClick={onClose} style={{ background: "linear-gradient(135deg,#FF2D2D,#CC0000)" }}>
-              Cerrar y Volver a Mesas
-            </Button>
-          </div>
-        ) : (
+        {/* ══════════════════════════════════════════════ */}
+        {/* PASO 1: Formulario de pago                    */}
+        {/* ══════════════════════════════════════════════ */}
+        {paso === 1 && (
           <div className="px-6 pb-6 pt-4 space-y-4">
             {/* Total */}
-            <div className="flex justify-between items-center py-3 px-4 rounded-xl border border-white/5 bg-white/3">
-              <span className="text-zinc-400 font-semibold text-sm">Total pedido</span>
-              <span className="text-2xl font-black font-mono text-white">{formatPrice(total)}</span>
+            <div className="flex justify-between items-center py-3 px-4 rounded-xl border border-white/8 bg-white/3">
+              <span className="text-zinc-400 font-semibold text-sm">Total a cobrar</span>
+              <span className="text-3xl font-black font-mono text-white">{formatPrice(total)}</span>
             </div>
 
-            {/* Propina */}
+            {/* Método de pago */}
             <div>
-              <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Propina</div>
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                {PROPINAS_SUGERIDAS.map((p) => (
-                  <button
-                    key={p.label}
-                    onClick={() => { setPropinaPct(p.pct ?? 0); setPropinaCustom(""); }}
-                    className={`h-9 rounded-lg text-xs font-bold border transition-all ${
-                      propinaPct === (p.pct ?? 0)
-                        ? "border-red-500/50 bg-red-500/10 text-red-400"
-                        : "border-white/10 bg-white/3 text-zinc-400 hover:border-white/20"
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <Input
-                placeholder="Monto manual propina"
-                value={propinaCustom}
-                onChange={(e) => { setPropinaCustom(formatInput(e.target.value)); setPropinaPct(null); }}
-                className="bg-white/3 border-white/10 text-white placeholder:text-zinc-600 h-9"
-              />
-              {propina > 0 && (
-                <div className="text-xs text-emerald-400 mt-1.5 font-semibold">Propina: {formatPrice(propina)}</div>
-              )}
-            </div>
-
-            {/* M\u00e9todo */}
-            <div>
-              <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Forma de pago</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">Forma de pago</div>
+              <div className="grid grid-cols-4 gap-2">
                 {[
                   { key: "efectivo", label: "Efectivo", icon: Banknote },
-                  { key: "transferencia", label: "Transferencia", icon: CreditCard },
+                  { key: "tarjeta", label: "Tarjeta", icon: CreditCard },
+                  { key: "transferencia", label: "Transfer", icon: Receipt },
                   { key: "mixto", label: "Mixto", icon: Split },
                 ].map(({ key, label, icon: Icon }) => (
                   <button
@@ -323,7 +258,7 @@ export function CobrarModal({ pedido, open, onClose }: CobrarModalProps) {
                     className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-bold transition-all ${
                       metodo === key
                         ? "border-red-500/50 bg-red-500/10 text-red-400"
-                        : "border-white/10 bg-white/3 text-zinc-400 hover:border-white/20"
+                        : "border-white/8 bg-white/3 text-zinc-500 hover:border-white/15"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -333,82 +268,266 @@ export function CobrarModal({ pedido, open, onClose }: CobrarModalProps) {
               </div>
             </div>
 
-            {/* Monto */}
+            {/* Monto en efectivo */}
             {(metodo === "efectivo" || metodo === "mixto") && (
               <div>
-                <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Efectivo recibido</div>
+                <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">
+                  {metodo === "mixto" ? "Efectivo recibido" : "Monto recibido"}
+                </div>
                 <Input
-                  placeholder="Monto efectivo"
+                  placeholder="0"
                   value={efectivoStr}
                   onChange={(e) => setEfectivoStr(formatInput(e.target.value))}
-                  className="bg-white/3 border-white/10 text-white placeholder:text-zinc-600"
+                  className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 font-mono text-xl h-12"
+                  autoFocus={metodo === "efectivo"}
                 />
-                {metodo === "efectivo" && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {BILLETES_COMUNES.filter((b) => b >= totalConPropina && b <= totalConPropina * 2.5).slice(0, 4).map((b) => (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {BILLETES.filter((b) => b >= total * 0.8 && b <= total * 2.5).slice(0, 5).map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => setEfectivoStr(b.toLocaleString("es-CO"))}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/8 text-xs font-bold text-zinc-400 hover:bg-white/10 transition-colors"
+                    >
+                      {formatPrice(b)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tarjeta */}
+            {(metodo === "tarjeta" || (metodo === "mixto" && tarjeta > 0)) && (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">
+                    {metodo === "mixto" ? "Tarjeta (complemento)" : "Monto tarjeta"}
+                  </div>
+                  <Input
+                    placeholder="0"
+                    value={tarjetaStr}
+                    onChange={(e) => setTarjetaStr(formatInput(e.target.value))}
+                    className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 font-mono text-xl h-12"
+                    autoFocus={metodo === "tarjeta"}
+                  />
+                </div>
+                {/* Tipo de tarjeta */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">Tipo de tarjeta</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(Object.keys(TIPO_TARJETA_LABELS) as TipoTarjeta[]).map((t) => (
                       <button
-                        key={b}
-                        onClick={() => setEfectivoStr(b.toLocaleString("es-CO"))}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-zinc-300 hover:bg-white/10 transition-colors"
+                        key={t}
+                        onClick={() => setTipoTarjeta(t)}
+                        className={`py-2 rounded-lg text-[10px] font-bold border transition-all ${
+                          tipoTarjeta === t
+                            ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-400"
+                            : "border-white/8 bg-white/3 text-zinc-500 hover:border-white/15"
+                        }`}
                       >
-                        {formatPrice(b)}
+                        {TIPO_TARJETA_LABELS[t]}
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
-
-            {(metodo === "transferencia" || metodo === "mixto") && (
-              <div>
-                <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Transferencia</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Banco (opcional)"
+                    value={bancoTarjeta}
+                    onChange={(e) => setBancoTarjeta(e.target.value)}
+                    className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 h-10"
+                  />
+                  <Input
+                    placeholder="Referencia (opcional)"
+                    value={referenciaTarjeta}
+                    onChange={(e) => setReferenciaTarjeta(e.target.value)}
+                    className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 h-10"
+                  />
+                </div>
                 <Input
-                  placeholder="Monto transferencia"
-                  value={transferenciaStr}
-                  onChange={(e) => setTransferenciaStr(formatInput(e.target.value))}
-                  className="bg-white/3 border-white/10 text-white placeholder:text-zinc-600"
+                  placeholder="Últimos 4 dígitos (opcional)"
+                  value={ultimos4Tarjeta}
+                  onChange={(e) => setUltimos4Tarjeta(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 h-10"
                 />
               </div>
             )}
 
-            {/* Resumen */}
-            <div className="rounded-xl border border-white/5 p-4 space-y-2 bg-white/2">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Subtotal</span>
-                <span className="font-mono font-bold">{formatPrice(total)}</span>
-              </div>
-              {propina > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Propina</span>
-                  <span className="font-mono font-bold text-emerald-400">+{formatPrice(propina)}</span>
+            {/* Monto transferencia */}
+            {(metodo === "transferencia" || metodo === "mixto") && (
+              <div>
+                <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider mb-2">
+                  {metodo === "mixto" ? "Transferencia (complemento)" : "Monto transferencia"}
                 </div>
-              )}
-              <div className="border-t border-white/5 pt-2 flex justify-between">
-                <span className="font-bold text-white">Total a cobrar</span>
-                <span className="font-black text-xl font-mono" style={{ color: "#FF2D2D" }}>{formatPrice(totalConPropina)}</span>
+                <Input
+                  placeholder="0"
+                  value={transferenciaStr}
+                  onChange={(e) => setTransferenciaStr(formatInput(e.target.value))}
+                  className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 font-mono text-xl h-12"
+                  autoFocus={metodo === "transferencia"}
+                />
               </div>
-              {montoPagado > 0 && metodo === "efectivo" && cambio > 0 && (
-                <div className="flex justify-between text-sm text-emerald-400 font-bold">
-                  <span>Cambio</span>
-                  <span className="font-mono">{formatPrice(cambio)}</span>
+            )}
+
+            {/* Cambio en tiempo real */}
+            {metodo === "efectivo" && efectivo > 0 && (
+              <div className={`flex justify-between items-center px-4 py-3 rounded-xl border ${
+                cambio >= 0 && efectivo >= total
+                  ? "border-emerald-500/20 bg-emerald-500/6"
+                  : "border-red-500/20 bg-red-500/6"
+              }`}>
+                <span className="font-bold text-sm text-zinc-300">
+                  {efectivo >= total ? "💵 Dar cambio" : "❌ Faltan"}
+                </span>
+                <span className={`font-black font-mono text-2xl ${efectivo >= total ? "text-emerald-400" : "text-red-400"}`}>
+                  {efectivo >= total ? formatPrice(cambio) : formatPrice(faltante)}
+                </span>
+              </div>
+            )}
+
+            {metodo === "mixto" && montoPagado > 0 && faltante > 0 && (
+              <div className="flex justify-between items-center px-4 py-3 rounded-xl border border-red-500/20 bg-red-500/6">
+                <span className="font-bold text-sm text-zinc-300">❌ Faltan</span>
+                <span className="font-black font-mono text-2xl text-red-400">{formatPrice(faltante)}</span>
+              </div>
+            )}
+
+            {metodo === "tarjeta" && tipoTarjeta === null && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-500/20 bg-amber-500/6">
+                <span className="text-xs text-amber-400 font-bold">⚠️ Selecciona el tipo de tarjeta</span>
+              </div>
+            )}
+
+            <Button
+              onClick={handleCobrar}
+              disabled={procesando || !puedeConfirmar}
+              className="w-full h-14 font-black text-lg gap-2 rounded-xl"
+              style={{
+                background: puedeConfirmar
+                  ? "linear-gradient(135deg,#FF2D2D 0%,#CC0000 100%)"
+                  : "rgba(255,255,255,0.05)",
+              }}
+            >
+              {procesando
+                ? <><div className="w-5 h-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />Procesando...</>
+                : `Cobrar ${formatPrice(total)}`}
+            </Button>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════ */}
+        {/* PASO 2: Cambio + Propina + Cerrar mesa        */}
+        {/* ══════════════════════════════════════════════ */}
+        {paso === 2 && (
+          <div className="px-6 pb-6 pt-4 space-y-4">
+            {/* Banner cambio */}
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/6 p-4 flex items-center gap-4">
+              <div className="w-11 h-11 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                <Check className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-white">¡Pago registrado!</div>
+                <div className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
+                  <Printer className="w-3 h-3" />
+                  Factura impresa automáticamente
                 </div>
-              )}
-              {faltante > 0 && montoPagado > 0 && (
-                <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Faltan {formatPrice(faltante)}
+                {numeroFactura && (
+                  <div className="text-xs text-emerald-400/70 font-bold mt-0.5">Factura #{numeroFactura}</div>
+                )}
+              </div>
+              {cambioFinal > 0 && (
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] text-emerald-400/70 font-bold uppercase tracking-wider">Dar cambio</div>
+                  <div className="text-2xl font-black font-mono text-emerald-400">{formatPrice(cambioFinal)}</div>
                 </div>
               )}
             </div>
 
-            <Button
-              onClick={handleCobrar}
-              disabled={cobrarMutation.isPending || (montoPagado < totalConPropina && (metodo !== "transferencia"))}
-              className="w-full h-12 font-black text-base"
-              style={{ background: "linear-gradient(135deg,#FF2D2D 0%,#CC0000 100%)" }}
-            >
-              {cobrarMutation.isPending ? "Procesando..." : `Cobrar ${formatPrice(totalConPropina)}`}
-            </Button>
+            {/* Resumen */}
+            <div className="rounded-xl border border-white/5 px-4 py-3 bg-white/2">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Total cobrado</span>
+                <span className="font-black font-mono text-white">{formatPrice(total)}</span>
+              </div>
+            </div>
+
+            {/* Propina */}
+            <div className="rounded-xl border border-white/8 bg-white/2 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-bold text-white">¿Dejó propina el cliente?</span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "Sin propina", pct: 0 },
+                  { label: "5%", pct: 5 },
+                  { label: "10%", pct: 10 },
+                  { label: "15%", pct: 15 },
+                ].map((p) => (
+                  <button
+                    key={p.label}
+                    onClick={() => { setPropinaPct(p.pct); setPropinaStr(""); }}
+                    className={`h-9 rounded-lg text-xs font-bold border transition-all ${
+                      propinaPct === p.pct && !propinaStr
+                        ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                        : "border-white/8 bg-white/3 text-zinc-500 hover:border-white/15"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <Input
+                placeholder="Monto exacto de propina ($)"
+                value={propinaStr}
+                onChange={(e) => { setPropinaStr(formatInput(e.target.value)); setPropinaPct(null); }}
+                className="bg-white/3 border-white/10 text-white placeholder:text-zinc-700 h-10"
+              />
+
+              {propina > 0 && (
+                <div className="flex justify-between items-center px-3 py-2 rounded-lg bg-amber-500/8 border border-amber-500/15">
+                  <span className="text-xs font-bold text-amber-400">Propina a registrar</span>
+                  <span className="font-black font-mono text-amber-400">{formatPrice(propina)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de acción */}
+            <div className="space-y-2">
+              {propina > 0 ? (
+                <Button
+                  onClick={() => handleCerrarMesa(true)}
+                  disabled={cerrando}
+                  className="w-full h-12 font-black text-base gap-2 rounded-xl"
+                  style={{ background: "linear-gradient(135deg,#22c55e 0%,#16a34a 100%)" }}
+                >
+                  {cerrando
+                    ? <><div className="w-4 h-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Cerrando...</>
+                    : <><Gift className="w-4 h-4" />Registrar propina y cerrar mesa</>}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleCerrarMesa(false)}
+                  disabled={cerrando}
+                  className="w-full h-12 font-black text-base gap-2 rounded-xl"
+                  style={{ background: "linear-gradient(135deg,#22c55e 0%,#16a34a 100%)" }}
+                >
+                  {cerrando
+                    ? <><div className="w-4 h-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Cerrando...</>
+                    : <><DoorOpen className="w-4 h-4" />Cerrar mesa</>}
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                onClick={() => pedidoCobradoId && abrirFactura(pedidoCobradoId)}
+                className="w-full h-9 text-zinc-600 hover:text-white text-xs gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Reimprimir factura
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

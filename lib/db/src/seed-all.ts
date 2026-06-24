@@ -140,7 +140,7 @@ export async function seedMesasYCaja() {
       await db.insert(mesasTable).values({
         numero: m.numero,
         nombre: m.nombre,
-        estado: m.numero === "03" || m.numero === "07" ? "ocupada" : m.numero === "05" ? "proceso" : "libre",
+        estado: m.numero === "03" || m.numero === "07" ? "ocupada" : m.numero === "05" ? "en_pago" : "libre",
         personas: m.numero === "03" ? 4 : m.numero === "07" ? 2 : m.numero === "05" ? 6 : 0,
       });
       console.log(`  -> Mesa ${m.numero} creada`);

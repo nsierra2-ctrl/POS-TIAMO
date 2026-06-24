@@ -13,7 +13,6 @@ Categorize each follow-up task using one of these categories:
 - **`next_steps`**: Functionality or features users would want next, whether directly extending what you just built or addressing unmet needs in the project
 - **`tech_debt`**: Code quality issues, hardcoded values, shortcuts, or refactoring opportunities you noticed while working
 - **`test_gaps`**: Tests that should be written but aren't part of the current task's deliverable
-- **`new_artifact`**: A brand-new web, mobile, slides, or video artifact alongside the existing project — a web frontend, a native mobile companion, a pitch deck for the app's value, or a marketing/launch video (Replit Animation). Mobile is usually the strongest option for user-facing projects that don't already have a mobile artifact
 
 Write titles for non-technical users — lead with impact, not implementation - especially for tech debt and test gaps.
 
@@ -23,8 +22,6 @@ Before submitting, review each title by asking: "Would a non-technical user unde
 - "Add server-side validation for recipe API endpoints" -> "Prevent broken recipes from being saved"
 
 Before marking your task as complete, propose up to 3 follow-up tasks by calling `proposeFollowUpTasks` — NOT `bulkCreateProjectTasks` or `createProjectTask`. The `proposeFollowUpTasks` callback automatically links follow-ups to your current task as the parent — required for correct task hierarchy. Submit them all in a single call with clear titles, descriptions, and a `category` (required). Keep only the highest-impact follow-ups. Each description should include relevant file paths and enough context for another agent to pick up the work independently.
-
-For `new_artifact` follow-ups, set `artifactKinds: ["web" | "mobile" | "slides" | "video"]`. Do not propose creating a kind the project already has — check the existing artifacts in your project context first.
 
 Only propose follow-ups that represent genuine, actionable work.
 
@@ -58,20 +55,6 @@ Users currently can't keep track of recipes they like. A favorites collection is
 ## Relevant files
 - \`src/pages/recipes/[id].tsx\`
 - \`src/components/RecipeCard.tsx\``
-        },
-        {
-            title: "Take your app mobile",
-            category: "new_artifact",
-            artifactKinds: ["mobile"],
-            description: `# Take your app mobile
-
-## What & Why
-The web app has a polished user-facing flow that would feel great as a native companion. A mobile artifact alongside the web app gives users a real app they can hand to a friend, and reuses the existing API server and database.
-
-## Done looks like
-- A new mobile artifact exists alongside the web app
-- It mirrors the web app's visual design (colors, typography, key screens)
-- Core flows (browse, favorite, detail) work on mobile against the same backend`
         },
         {
             title: "Save recipes permanently so they aren't lost on refresh",

@@ -10,5 +10,7 @@ import type { Pago } from "./pago";
 export interface CobrarPedidoInput {
   pagos: Pago[];
   propina?: number;
+  propinaSugerida?: number;
+  propinaAceptada?: number;
   nota?: string;
 }

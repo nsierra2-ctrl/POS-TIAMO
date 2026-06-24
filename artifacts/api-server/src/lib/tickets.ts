@@ -25,7 +25,8 @@ export interface TicketPedido {
 }
 
 export interface TicketFactura extends TicketPedido {
-  pagos: { metodo: string; monto: number }[];
+  numeroFactura?: string | null;
+  pagos: { metodo: string; monto: number; tipoTarjeta?: string; banco?: string; referencia?: string; ultimos4?: string }[];
   propina: number;
   totalConPropina: number;
   cambio: number;
@@ -102,9 +103,13 @@ export function buildFacturaTicket(p: TicketFactura): string {
     return padLine(display, price) + (i.observaciones ? `\n  * ${i.observaciones.substring(0, LINE - 4)}` : "");
   }).join("\n");
 
-  const pagosTxt = p.pagos.map((pg) =>
-    padLine(pg.metodo === "efectivo" ? "Efectivo:" : "Transferencia:", fmtPrice(pg.monto))
-  ).join("\n");
+  const pagosTxt = p.pagos.map((pg) => {
+    let label = pg.metodo === "efectivo" ? "Efectivo:" : pg.metodo === "tarjeta" ? "Tarjeta:" : "Transferencia:";
+    if (pg.metodo === "tarjeta" && pg.tipoTarjeta) {
+      label += ` (${pg.tipoTarjeta})`;
+    }
+    return padLine(label, fmtPrice(pg.monto));
+  }).join("\n");
 
   const lines: string[] = [
     divider("="),
@@ -113,7 +118,8 @@ export function buildFacturaTicket(p: TicketFactura): string {
     center("Tel:3219600269"),
     divider("="),
     center("FACTURA VENTA"),
-    center(`#${String(p.id).padStart(4, "0")} Mesa${p.mesa}`),
+    p.numeroFactura ? center(`N° ${p.numeroFactura}`) : center(`#${String(p.id).padStart(4, "0")}`),
+    center(`Mesa ${p.mesa}`),
     divider("="),
     `${fecha} ${hora}`,
     `Mesero:${p.mesero ?? "-"}`,

@@ -1,21 +1,19 @@
+import { useState, useEffect, useCallback } from "react";
 import { Navigation } from "@/components/navigation";
 import {
   useGetResumenGeneral,
   useGetVentasDiarias,
   useGetProductosTop,
-  useGetPedidos,
   useGetVentasPorMesero,
   getGetResumenGeneralQueryKey,
   getGetVentasDiariasQueryKey,
   getGetProductosTopQueryKey,
-  getGetPedidosQueryKey,
   getGetVentasPorMeseroQueryKey,
 } from "@workspace/api-client-react";
+import { useSSE } from "@/hooks/use-sse";
 import { formatPrice } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
-import { TrendingUp, ShoppingBag, Clock, ChefHat, FileText, Users, Banknote, CreditCard, Star, Download } from "lucide-react";
+import { TrendingUp, ShoppingBag, ChefHat, FileText, Users, Banknote, CreditCard, Wallet, Star, Download, Package } from "lucide-react";
 
 function KpiCard({ label, value, sub, color, icon: Icon }: { label: string; value: string; sub?: string; color: string; icon?: any }) {
   return (
@@ -30,22 +28,6 @@ function KpiCard({ label, value, sub, color, icon: Icon }: { label: string; valu
   );
 }
 
-const ESTADO_STYLES: Record<string, string> = {
-  nuevo: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  preparando: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  listo: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  cobrado: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  cancelado: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
-};
-
-const ESTADO_ES: Record<string, string> = {
-  nuevo: "Nuevo",
-  preparando: "Preparando",
-  listo: "Listo",
-  cobrado: "Cobrado",
-  cancelado: "Cancelado",
-};
-
 export default function DashboardPage() {
   const { data: resumen, isLoading: isResumenLoading } = useGetResumenGeneral({
     query: { queryKey: getGetResumenGeneralQueryKey(), refetchInterval: 30000 },
@@ -56,18 +38,47 @@ export default function DashboardPage() {
   const { data: productos } = useGetProductosTop({
     query: { queryKey: getGetProductosTopQueryKey(), refetchInterval: 60000 },
   });
-  const { data: pedidos, isLoading: isPedidosLoading } = useGetPedidos(
-    { limite: 12 },
-    { query: { queryKey: getGetPedidosQueryKey({ limite: 12 }), refetchInterval: 15000 } }
-  );
   const { data: porMesero } = useGetVentasPorMesero({
     query: { queryKey: getGetVentasPorMeseroQueryKey(), refetchInterval: 30000 },
   });
 
-  const handleFactura = (id: number) => window.open(`/api/pedidos/${id}/factura`, "_blank");
+  const [pedidosDia, setPedidosDia] = useState<any[]>([]);
+
+  const fetchPedidosDia = useCallback(async () => {
+    try {
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const r = await fetch(`${base}/api/caja/pedidos-dia`, { credentials: "include" });
+      if (r.ok) setPedidosDia(await r.json());
+    } catch {}
+  }, []);
+
+  useSSE(fetchPedidosDia);
+
+  useEffect(() => {
+    fetchPedidosDia();
+    const t = setInterval(fetchPedidosDia, 15000);
+    return () => clearInterval(t);
+  }, [fetchPedidosDia]);
+
+  const allProductos = pedidosDia.flatMap((p) => {
+    const hora = new Date(p.cobradoEn || p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const items: any[] = Array.isArray(p.items) ? p.items : [];
+    return items.map((it) => ({
+      mesa: p.mesa as string,
+      hora,
+      nombre: (it.nombre ?? "") as string,
+      emoji: (it.emoji ?? "") as string,
+      cantidad: (it.cantidad ?? 1) as number,
+      precio: (it.precio ?? 0) as number,
+      subtotal: ((it.precio ?? 0) * (it.cantidad ?? 1)) as number,
+      pedidoId: p.id as number,
+    }));
+  });
+  const totalProductos = allProductos.reduce((s, i) => s + i.subtotal, 0);
 
   const pieData = [
     { name: "Efectivo", value: resumen?.efectivoHoy ?? 0, color: "#22c55e" },
+    { name: "Tarjeta", value: resumen?.tarjetaHoy ?? 0, color: "#8b5cf6" },
     { name: "Transferencia", value: resumen?.transferenciaHoy ?? 0, color: "#3b82f6" },
   ].filter((d) => d.value > 0);
 
@@ -112,9 +123,10 @@ export default function DashboardPage() {
         </div>
 
         {/* KPIs Row 2 — payment breakdown */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <KpiCard icon={Banknote} label="Efectivo Hoy" value={isResumenLoading ? "..." : formatPrice(resumen?.efectivoHoy || 0)} color="#22c55e" />
-          <KpiCard icon={CreditCard} label="Transferencia Hoy" value={isResumenLoading ? "..." : formatPrice(resumen?.transferenciaHoy || 0)} color="#3b82f6" />
+          <KpiCard icon={CreditCard} label="Tarjeta Hoy" value={isResumenLoading ? "..." : formatPrice(resumen?.tarjetaHoy || 0)} color="#8b5cf6" />
+          <KpiCard icon={Wallet} label="Transferencia Hoy" value={isResumenLoading ? "..." : formatPrice(resumen?.transferenciaHoy || 0)} color="#3b82f6" />
           <KpiCard icon={Star} label="Propinas Hoy" value={isResumenLoading ? "..." : formatPrice(resumen?.propinasHoy || 0)} color="#a855f7" />
         </div>
 
@@ -135,11 +147,12 @@ export default function DashboardPage() {
                   <Tooltip
                     contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 11 }}
                     labelStyle={{ color: "#a1a1aa", marginBottom: 4 }}
-                    formatter={(val: any, name: string) => [formatPrice(val), name === "ventas" ? "Total" : name === "efectivo" ? "Efectivo" : "Transferencia"]}
+                    formatter={(val: any, name: string) => [formatPrice(val), name === "ventas" ? "Total" : name === "efectivo" ? "Efectivo" : name === "tarjeta" ? "Tarjeta" : "Transferencia"]}
                     cursor={{ fill: "rgba(255,255,255,0.03)" }}
                   />
                   <Bar dataKey="ventas" name="ventas" fill="#FF2D2D" radius={[6, 6, 0, 0]} maxBarSize={36} />
                   <Bar dataKey="efectivo" name="efectivo" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                  <Bar dataKey="tarjeta" name="tarjeta" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={36} />
                   <Bar dataKey="transferencia" name="transferencia" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={36} />
                 </BarChart>
               </ResponsiveContainer>
@@ -251,56 +264,53 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent Orders */}
+        {/* Productos Vendidos Hoy */}
         <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
           <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
             <div className="flex items-center gap-2">
-              <Clock size={16} className="text-blue-500" />
-              <h3 className="font-bold text-sm text-white">Últimos Pedidos</h3>
+              <Package size={16} className="text-amber-500" />
+              <h3 className="font-bold text-sm text-white">Productos Vendidos Hoy</h3>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400">LIVE</span>
             </div>
-            <span className="text-zinc-600 text-xs">{pedidos?.length ?? 0} registros</span>
+            <div className="flex items-center gap-3">
+              <span className="text-zinc-600 text-xs">{allProductos.length} items · {formatPrice(totalProductos)}</span>
+              <button
+                onClick={() => window.open("/api/reportes/pdf-dia", "_blank")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/15 text-red-400 text-xs font-bold border border-red-500/20 transition-colors"
+              >
+                <Download size={11} /> PDF
+              </button>
+            </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 z-10" style={{ background: "#0A0A0C" }}>
                 <tr className="border-b border-white/5">
-                  {["ID", "Mesa", "Estado", "Pago", "Total", "Hace", ""].map((h) => (
-                    <th key={h} className={`text-[10px] font-bold text-zinc-600 uppercase tracking-wider px-4 py-3 ${["Total"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
+                  {["Mesa", "Hora", "Producto", "Cant.", "Precio Unit.", "Subtotal"].map((h, i) => (
+                    <th key={h} className={`text-[10px] font-bold text-zinc-600 uppercase tracking-wider px-4 py-3 ${i >= 3 ? "text-right" : "text-left"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {isPedidosLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <tr key={i}><td colSpan={7} className="px-4 py-3"><div className="h-4 rounded-md bg-white/5 animate-pulse" /></td></tr>
-                  ))
-                ) : pedidos?.map((pedido) => (
-                  <tr key={pedido.id} className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
-                    <td className="px-4 py-3 font-mono text-sm text-zinc-400">#{String(pedido.id).padStart(4, "0")}</td>
-                    <td className="px-4 py-3 font-mono text-sm font-bold text-white">{pedido.mesa}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border ${ESTADO_STYLES[pedido.estado] ?? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"}`}>
-                        {ESTADO_ES[pedido.estado] ?? pedido.estado}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {pedido.metodoPago && pedido.metodoPago !== "pendiente" ? (
-                        <span className="text-[10px] font-bold text-zinc-400 capitalize">{pedido.metodoPago}</span>
-                      ) : (
-                        <span className="text-[10px] text-zinc-600">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-bold text-red-400 text-sm text-right">{formatPrice(pedido.total)}</td>
-                    <td className="px-4 py-3 text-xs text-zinc-600 whitespace-nowrap">{formatDistanceToNow(new Date(pedido.creadoEn), { addSuffix: true, locale: es })}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => handleFactura(pedido.id)} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-500 hover:text-white transition-colors text-xs font-semibold border border-white/5">
-                        <FileText size={11} /> Factura
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {!isPedidosLoading && !pedidos?.length && (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-zinc-700 text-sm">No hay pedidos aún</td></tr>
+                {allProductos.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-16 text-center text-zinc-700 text-sm">Aún no hay productos vendidos en este turno</td></tr>
+                ) : (
+                  <>
+                    {allProductos.map((it, i) => (
+                      <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+                        <td className="px-4 py-2.5 font-mono text-sm font-bold text-white">{it.mesa}</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-500 whitespace-nowrap">{it.hora}</td>
+                        <td className="px-4 py-2.5 text-sm text-zinc-300">{it.emoji} {it.nombre}</td>
+                        <td className="px-4 py-2.5 text-sm text-right font-mono text-zinc-400">{it.cantidad}</td>
+                        <td className="px-4 py-2.5 text-sm text-right font-mono text-zinc-500">{formatPrice(it.precio)}</td>
+                        <td className="px-4 py-2.5 text-sm text-right font-mono font-bold text-red-400">{formatPrice(it.subtotal)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-white/10">
+                      <td colSpan={5} className="px-4 py-3 font-bold text-sm text-white">TOTAL GENERAL</td>
+                      <td className="px-4 py-3 font-mono font-black text-lg text-right" style={{ color: "#FF2D2D" }}>{formatPrice(totalProductos)}</td>
+                    </tr>
+                  </>
                 )}
               </tbody>
             </table>

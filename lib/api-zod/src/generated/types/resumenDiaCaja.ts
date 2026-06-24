@@ -9,6 +9,7 @@
 export interface ResumenDiaCaja {
   totalVentas: number;
   totalEfectivo: number;
+  totalTarjeta: number;
   totalTransferencia: number;
   totalPropinas: number;
   pedidosCobrados: number;

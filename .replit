@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-20", "bash", "web"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -55,7 +55,7 @@ waitForPort = 22021
 outputType = "webview"
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]

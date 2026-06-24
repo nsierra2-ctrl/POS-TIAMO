@@ -27,7 +27,9 @@ export type EstadoMesa = (typeof EstadoMesa)[keyof typeof EstadoMesa];
 export const EstadoMesa = {
   libre: "libre",
   ocupada: "ocupada",
-  proceso: "proceso",
+  lista_cobro: "lista_cobro",
+  en_pago: "en_pago",
+  finalizada: "finalizada",
 } as const;
 
 export type EstadoPedido = (typeof EstadoPedido)[keyof typeof EstadoPedido];
@@ -91,12 +93,29 @@ export type PagoMetodo = (typeof PagoMetodo)[keyof typeof PagoMetodo];
 
 export const PagoMetodo = {
   efectivo: "efectivo",
+  tarjeta: "tarjeta",
   transferencia: "transferencia",
+} as const;
+
+export type PagoTipoTarjeta =
+  (typeof PagoTipoTarjeta)[keyof typeof PagoTipoTarjeta];
+
+export const PagoTipoTarjeta = {
+  debito: "debito",
+  credito: "credito",
+  datafono: "datafono",
+  daviplata: "daviplata",
+  nequi: "nequi",
+  boton_bancolombia: "boton_bancolombia",
 } as const;
 
 export interface Pago {
   metodo: PagoMetodo;
   monto: number;
+  tipoTarjeta?: PagoTipoTarjeta;
+  banco?: string;
+  referencia?: string;
+  ultimos4?: string;
 }
 
 export interface HistorialEstado {
@@ -212,6 +231,8 @@ export interface ActualizarPedidoInput {
 export interface CobrarPedidoInput {
   pagos: Pago[];
   propina?: number;
+  propinaSugerida?: number;
+  propinaAceptada?: number;
   nota?: string;
 }
 
@@ -246,6 +267,7 @@ export interface ResumenGeneral {
   crecimientoSemana: number;
   tiempoPromedioMin: number;
   efectivoHoy: number;
+  tarjetaHoy: number;
   transferenciaHoy: number;
   propinasHoy: number;
 }
@@ -255,6 +277,7 @@ export interface VentaDiaria {
   ventas: number;
   pedidos: number;
   efectivo: number;
+  tarjeta: number;
   transferencia: number;
 }
 
@@ -326,6 +349,7 @@ export interface ResumenCierre {
 export interface ResumenDiaCaja {
   totalVentas: number;
   totalEfectivo: number;
+  totalTarjeta: number;
   totalTransferencia: number;
   totalPropinas: number;
   pedidosCobrados: number;

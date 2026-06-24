@@ -85,7 +85,7 @@ These existing callbacks are useful during debugging:
 
 - `fetchDeploymentLogs({ afterTimestamp?, beforeTimestamp?, message? })` — fetch runtime/production logs (see `references/deployment-logs.md`). Use to check what happens after the app starts in production.
 - `viewEnvVars({ environment: "development" | "production" })` — compare env var names between dev and prod (from `environment-secrets` skill). Use to find missing production secrets.
-- `verifyAndReplaceArtifactToml({ tempFilePath, artifactTomlPath })` — validate and replace an artifact's `artifact.toml` through a temp file (from `artifacts` skill). To update deployment settings, copy the current `artifact.toml` to a temp file (e.g. `artifact.edit.toml`), edit the temp file, then call this callback with absolute paths. Do not edit `artifact.toml` directly.
+- `deployConfig({ deploymentTarget, run?, build?, publicDir? })` — reconfigure deployment settings (from the main deployment skill). Use to fix run commands and build commands.
 - `suggestDeploy()` — prompt the user to click Publish after making fixes. **Only works in the main repl context** — in task-agent/subrepl sessions this callback returns `success: false`. If you are in a task agent, skip this call and instead remind the user to publish from the main version after merging.
 
 ## Diagnostic Procedure
@@ -134,7 +134,7 @@ A deployment goes through these phases in order: **build** → **promote** → *
 
 - **Build phase failures** look like compilation errors, `npm install` failures, missing dependencies, or build commands exiting non-zero.
 - **Promote phase failures** look like the build succeeding (e.g. image pushed, container started) followed by the container failing to become ready. What "ready" means depends on the deployment target:
-  - **`autoscale` and HTTP-serving `vm`**: the deployer sends a startup probe and waits for an HTTP 200 response. Build logs mention health checks, startup probes, or readiness probes timing out. The default probe path is `GET /`, but artifacts can override it under `[services.<name>.production.health.startup]` in `artifact.toml` — always check there first to find the actual probe path. The probe fails if the app crash-loops, returns non-200 on the probe path, binds to the wrong host/port, or takes too long to start.
+  - **`autoscale` and HTTP-serving `vm`**: the deployer sends a startup probe and waits for an HTTP 200 response. Build logs mention health checks, startup probes, or readiness probes timing out. The default probe path is `GET /`. The probe fails if the app crash-loops, returns non-200 on the probe path, binds to the wrong host/port, or takes too long to start.
   - **non-HTTP `vm` (Discord bots, workers, etc.) and `scheduled` jobs**: there is no HTTP probe. The promote step fails when the run command exits non-zero or crashes during startup. Build logs typically just show the process exiting with a stack trace or non-zero exit code. Do **not** look for an HTTP route in this case — the failure is the process itself.
   - **`static`**: there is no run command, so promote-step failures here are rare and usually mean `publicDir` is empty or misconfigured.
 - **Serve phase failures** happen after a successful promote: the app is live but throws errors at runtime. These show up in `fetchDeploymentLogs()`, not in build logs.
@@ -145,8 +145,8 @@ A deployment goes through these phases in order: **build** → **promote** → *
 → Fix the code or configuration directly. See Common Failure Modes below.
 
 **Build phase succeeded but the promote step failed** (build logs mention health check, startup probe, container failing to start, the process exiting, or the deployment never became ready):
-→ First check the deployment target in the artifact's `artifact.toml` — the right diagnosis depends on it.
-→ For **`autoscale` and HTTP-serving `vm`**: the app is failing the startup probe. Check `artifact.toml` for `[services.<name>.production.health.startup].path` to find the probe path (defaults to `GET /` if unset). The probe can fail because the app crash-loops on startup, the probe path returns non-200, or the app binds to the wrong host/port. See "Health check / promote step failure" and "Application crashes on startup" below.
+→ First check the deployment target in `.replit`'s `[deployment]` section — the right diagnosis depends on it.
+→ For **`autoscale` and HTTP-serving `vm`**: the app is failing the startup probe. The default probe is `GET /`. The probe can fail because the app crash-loops on startup, the probe path returns non-200, or the app binds to the wrong host/port. See "Health check / promote step failure" and "Application crashes on startup" below.
 → For **non-HTTP `vm` (bots, workers) and `scheduled` jobs**: the run command exited non-zero or crashed before becoming healthy. There is no HTTP probe — do not chase a `/` route. See "Application crashes on startup" below.
 → Either way, check runtime logs to see why the process is failing: `fetchDeploymentLogs({ message: "(?i)(error|exception|failed|crash|traceback)" })`.
 
@@ -159,18 +159,7 @@ A deployment goes through these phases in order: **build** → **promote** → *
 
 ### Step 4: Check deployment configuration
 
-There are two places deployment configuration can fail:
-
-**Artifact-level settings** (`artifact.toml`): Read each artifact's `.replit-artifact/artifact.toml` to check per-service `production.run` and `production.build` settings. The `.replit` file's `deployment.run` is **ignored** in artifact mode.
-
-To fix deployment settings in `artifact.toml`, use the `verifyAndReplaceArtifactToml` callback:
-
-1. Read the current `artifact.toml` for the affected artifact.
-2. Copy it to a sibling temp file (e.g. `artifact.edit.toml`).
-3. Edit the temp file to fix the `[services.<name>.production]` section.
-4. Call `verifyAndReplaceArtifactToml({ tempFilePath: "<absolute-path>/artifact.edit.toml", artifactTomlPath: "<absolute-path>/artifact.toml" })`.
-
-**Root pre-build hook** (`.replit`): The `.replit` file's `deployment.build` acts as a pre-build hook that runs at the repo root before any artifact builds. If the build logs show the failure comes from this root-level command (e.g. `pnpm run build:web` failing at the repo root), the fix is in the source code or scripts it invokes — not in `artifact.toml`. Read `.replit`'s `[deployment]` section to identify the pre-build command, then fix the underlying script or code that it runs.
+Read `.replit`'s `[deployment]` section. Verify run command, build command, and deployment target are correct. Use `deployConfig()` to fix any misconfigured settings.
 
 ### Step 5: After fixing
 
@@ -188,7 +177,7 @@ After making code or configuration fixes:
   - **non-HTTP `vm` (bots, workers) / `scheduled` jobs**: build logs show the run command exiting with a stack trace or non-zero exit code, or the process restarting repeatedly. There is no HTTP probe — the failure is just the process dying.
 - **Look for:** Uncaught exceptions, import errors, missing modules, missing environment variables (e.g. `DISCORD_TOKEN`), syntax errors, or repeated restarts in runtime logs (`fetchDeploymentLogs`).
 - **Fix:** Read the stack trace and fix the code error so the app starts cleanly and stays up. Confirm by running the production `run` command locally:
-  - For HTTP services: it must start without crashing **and** respond 200 on the probe path (check `artifact.toml` for `[services.<name>.production.health.startup].path`, defaults to `/`).
+  - For HTTP services: it must start without crashing **and** respond 200 on the probe path (`GET /` by default).
   - For bots/workers/jobs: it must start without crashing and stay running (or, for `scheduled`, run to completion with exit code 0). If the crash is from a missing secret, use `requestEnvVar()` to ask the user to add it to production.
 
 ### Build command failure
@@ -201,7 +190,7 @@ After making code or configuration fixes:
 
 - **Indicators:** Build logs show command not found or immediate exit.
 - **Common causes:** Run command references a file that doesn't exist, uses a dev server instead of production server, wrong binary name.
-- **Fix:** Verify the run command in the artifact's `artifact.toml` `[services.<name>.production]` section. Use production servers: `gunicorn` not `flask run`, `node server.js` not `npm run dev`. Use `verifyAndReplaceArtifactToml` to update the configuration.
+- **Fix:** Verify the run command in `.replit` `[deployment]` section. Use production servers: `gunicorn` not `flask run`, `node server.js` not `npm run dev`.
 
 ### Port/binding issues
 
@@ -215,14 +204,14 @@ After making code or configuration fixes:
 ### Health check / promote step failure
 
 - **Indicators:** The **build phase succeeds** but the deployment fails at the **promote step**. Build logs mention health check failures, startup probe timeouts, the container failing to become ready, or the deployment never reaching the live state. This is one of the most common deployment failure modes and it is **not** a build problem — the artifact built fine, the app just isn't responding to the probe.
-- **Details:** Before promoting a deployment to live, the deployer sends a startup probe and requires an HTTP 200 response. The default probe path is `GET /`, but artifact deployments can configure a custom path in `artifact.toml` under `[services.<name>.production.health.startup]` (e.g. `path = "/api/healthz"`). If the probe doesn't get a 200 within the timeout, the promote step fails and the previous version (if any) keeps serving traffic.
+- **Details:** Before promoting a deployment to live, the deployer sends a startup probe to `GET /` and requires an HTTP 200 response. If the probe doesn't get a 200 within the timeout, the promote step fails and the previous version (if any) keeps serving traffic.
 - **Common causes:**
   - **App crashes or crash-loops on startup** — a crashing app obviously can't respond to the probe. Check runtime logs for stack traces. See "Application crashes on startup" above.
-  - App returns 404, 3xx redirect, or 5xx on the probe path.
-  - App requires authentication on the health check route.
+  - App returns 404, 3xx redirect, or 5xx on `/`.
+  - App requires authentication on all routes including `/`.
   - App binds to `localhost`/`127.0.0.1` instead of `0.0.0.0`, or to the wrong port.
   - App takes too long to start (slow imports, blocking startup work, large model downloads).
-- **Fix:** Check the artifact's `artifact.toml` for a custom health check path. Ensure that route returns a 200 response. If no custom path is configured, ensure `GET /` returns 200. Use `fetchDeploymentLogs()` to see whether the app is crashing or just responding incorrectly. Optimize startup time if needed.
+- **Fix:** Ensure the root route `/` returns a 200 response. Use `fetchDeploymentLogs()` to see whether the app is crashing or just responding incorrectly. Optimize startup time if needed.
 
 ### Missing or different environment variables
 
@@ -245,25 +234,10 @@ Autoscale deployments are **stateless Cloud Run services**. Each request may hit
 
 If the app needs any of the above, inform the user that they should switch to Reserved VM (`vm`) deployment type in the Deployments pane. The deployment type is not something you can change programmatically — the user must change it themselves.
 
-### Artifact deployment misconfiguration
-
-- **Symptoms:** Build succeeds but the wrong thing runs, or run command not found, or the app serves a 404.
-- **How it works:** Each artifact has a `.replit-artifact/artifact.toml` with per-service `production.run`, `production.build`, `production.serve`, and `production.publicDir` settings. The `.replit` file's `deployment.run` is **completely ignored** in artifact mode. The `.replit` file's `deployment.build` becomes a **pre-build hook**.
-- **Common causes:**
-  - `production.run` missing from an artifact's `artifact.toml`
-  - `production.build` missing or wrong in `artifact.toml`
-  - Agent or user set `deployment.run`/`deployment.build` in `.replit` thinking it would configure the artifact
-  - `deployment.build` in `.replit` set to a command that fails at the repo root
-- **Fix:** Read each artifact's `.replit-artifact/artifact.toml` and verify the `[services.<name>.production]` section. Use `verifyAndReplaceArtifactToml` to fix production settings.
-
-### "Could not find run command" on an artifact repl
-
-Publish detection reads the **committed** git tree. If `.gitignore` matches `artifacts/`, `artifact.toml`, or `.replit-artifact/`, the toml files aren't committed and the repl is treated as legacy. Remove the offending lines, `git add` the artifact paths, commit, and retry Publish.
-
 ## Important Notes
 
 1. **Don't diagnose infrastructure problems.** If the error appears to be on Replit's side (e.g., transient cloud provider issues, `UnknownError` from the deployer), suggest the user retry the deployment or contact Replit support.
 2. **Changing deployment type.** The deployment type (autoscale, vm, scheduled, static) is set in the Deployments pane, not in code. If it needs to change, tell the user to update it themselves.
 3. **Use production terminology.** In user-facing messages, say "publish" not "deploy" — that's the Replit product terminology.
 4. **You cannot trigger a deployment.** In the main repl, call `suggestDeploy()` to prompt the user to click the Publish button. In task-agent/subrepl sessions, `suggestDeploy()` is unavailable — remind the user to publish from the main version after merging.
-5. **Production config lives in `artifact.toml`.** Each artifact's deployment settings are in its `.replit-artifact/artifact.toml` file, not in `.replit`. Always check `artifact.toml` when debugging deployment issues.
+5. **Production config lives in `.replit`.** Deployment settings (run command, build command, deployment target) are in the `.replit` file's `[deployment]` section.

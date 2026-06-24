@@ -5,6 +5,11 @@ description: Guidelines for using RevenueCat to integrate payments in mobile app
 # Note: ./references/replit-revenuecat-sdk-docs.md is copy-pasted manually from https://github.com/replit/revenuecat-sdk/blob/main/docs/SDK.md and was last updated: 2026-03-19 for version 4.0.0
 ---
 
+## Read the monetization skill first
+
+Before using anything in this skill, read the `monetization` skill and follow its routing instructions. It is the single source of truth for choosing a payment provider on Replit. Only continue with this RevenueCat skill once the monetization skill has confirmed that RevenueCat is the right provider (either because the user explicitly named RevenueCat, the project already has RevenueCat wired up, or the routing question resolved to RevenueCat).
+
+
 
 ## Introduction
 
@@ -15,13 +20,11 @@ description: Guidelines for using RevenueCat to integrate payments in mobile app
 
 ## Prerequisites
 
-1. These packages must be installed:
-    - `react-native-purchases` - Official client-side SDK for React Native. This should be used on the client. This MUST be installed inside the target mobile workspace package, not in the root of the monorepo
-    - `@replit/revenuecat-sdk` - SDK for RevenueCat's REST API. This should NEVER be used on the client, only for server-side scripts. This MUST be installed in the root of the workspace
+1. These packages must be installed in the workspace root package.json:
+    - `react-native-purchases` - Official client-side SDK for React Native. This should be used on the client.
+    - `@replit/revenuecat-sdk` - SDK for RevenueCat's REST API. This should NEVER be used on the client, only for server-side scripts.
 
-    If they are not installed, use pnpm to install them.
-    Installing to monorepo root: `$ cd /home/runner/workspace && pnpm add -w <packages>`
-    Installing to workspace package: `$ cd /home/runner/workspace/:package_path && pnpm add <packages>`
+    If they are not installed, use npm to install them: `$ cd /home/runner/workspace && npm install <packages>`
 
 
 2. The RevenueCat integration must be connected to the repl. This is necessary as the integration creates an authenticated client for RevenueCat accessible via a function `getUncachableRevenueCatClient`. You can do this by proposing the integration. Reference the `integrations` skill if necessary.
@@ -30,9 +33,9 @@ You are required to ensure these requirements are met before setting up or using
 
 ## Project Structure
 
-- **Scripts directory**: The `@workspace/scripts` monorepo package (e.g., `src/seedRevenueCat.ts`)
-- **Run a script**: `pnpm --filter @workspace/scripts exec tsx src/<script>.ts`
-- **Client app directory**: The Expo app artifact
+- **Scripts directory**: `scripts/` at the workspace root (e.g., `scripts/seedRevenueCat.ts`)
+- **Run a script**: `npx tsx scripts/<script>.ts`
+- **Client app directory**: `client/`
 
 Reference files use these terms. Map them to these concrete paths.
 

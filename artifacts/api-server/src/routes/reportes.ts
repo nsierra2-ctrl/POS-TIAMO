@@ -86,12 +86,14 @@ router.get("/reportes/resumen", requireAuth, requireRol("admin"), async (req, re
     );
 
     let efectivoHoy = 0;
+    let tarjetaHoy = 0;
     let transferenciaHoy = 0;
     let propinasHoy = 0;
     for (const p of pedidosCobradosHoy) {
       const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
       for (const pg of pagos) {
         if (pg.metodo === "efectivo") efectivoHoy += pg.monto;
+        else if (pg.metodo === "tarjeta") tarjetaHoy += pg.monto;
         else if (pg.metodo === "transferencia") transferenciaHoy += pg.monto;
       }
       propinasHoy += p.propina ?? 0;
@@ -107,6 +109,7 @@ router.get("/reportes/resumen", requireAuth, requireRol("admin"), async (req, re
       crecimientoSemana: Math.round(crecimiento * 10) / 10,
       tiempoPromedioMin: 12,
       efectivoHoy,
+      tarjetaHoy,
       transferenciaHoy,
       propinasHoy,
     });
@@ -131,18 +134,20 @@ router.get("/reportes/ventas-diarias", requireAuth, requireRol("admin"), async (
 
       let ventas = 0;
       let efectivo = 0;
+      let tarjeta = 0;
       let transferencia = 0;
       for (const p of pedidosDia) {
         ventas += p.total;
         const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
         for (const pg of pagos) {
           if (pg.metodo === "efectivo") efectivo += pg.monto;
+          else if (pg.metodo === "tarjeta") tarjeta += pg.monto;
           else if (pg.metodo === "transferencia") transferencia += pg.monto;
         }
       }
 
       const fechaStr = inicio.toLocaleDateString("es-CO", { weekday: "short", day: "numeric" });
-      dias.push({ fecha: fechaStr, ventas, pedidos: pedidosDia.length, efectivo, transferencia });
+      dias.push({ fecha: fechaStr, ventas, pedidos: pedidosDia.length, efectivo, tarjeta, transferencia });
     }
     res.json(dias);
   } catch (e) {
@@ -233,6 +238,10 @@ router.get("/reportes/pdf-dia", requireAuth, requireRol("admin"), async (req, re
       const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
       return s + pagos.filter((pa: any) => pa.metodo === "efectivo").reduce((a: number, pa: any) => a + pa.monto, 0);
     }, 0);
+    const totalTarjeta = cobrados.filter((p) => p.metodoPago === "tarjeta" || p.metodoPago === "mixto").reduce((s, p) => {
+      const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
+      return s + pagos.filter((pa: any) => pa.metodo === "tarjeta").reduce((a: number, pa: any) => a + pa.monto, 0);
+    }, 0);
     const totalTransferencia = cobrados.filter((p) => p.metodoPago === "transferencia" || p.metodoPago === "mixto").reduce((s, p) => {
       const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
       return s + pagos.filter((pa: any) => pa.metodo === "transferencia").reduce((a: number, pa: any) => a + pa.monto, 0);
@@ -261,10 +270,26 @@ router.get("/reportes/pdf-dia", requireAuth, requireRol("admin"), async (req, re
     }
     const topProductos = [...productosMap.values()].sort((a, b) => b.cantidad - a.cantidad).slice(0, 10);
 
-    const pedidosRows = cobrados.slice(0, 30).map((p) => {
-      const hora = new Date(p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    const pedidosRows = cobrados.map((p) => {
+      const hora = new Date(p.cobradoEn ?? p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
       return `<tr><td>#${String(p.id).padStart(4, "0")}</td><td>${p.mesa}</td><td>${hora}</td><td>${p.metodoPago ?? "—"}</td><td style="text-align:right;font-weight:700;">${formatCOP(p.total)}</td>${p.propina > 0 ? `<td style="text-align:right;color:#7c3aed;">${formatCOP(p.propina)}</td>` : "<td>—</td>"}</tr>`;
     }).join("");
+
+    // Desglose por producto individual (mesa, hora, producto, cantidad, precio unit, subtotal)
+    const itemsDetalle: { mesa: string; hora: string; nombre: string; cantidad: number; precio: number; subtotal: number }[] = [];
+    for (const p of cobrados) {
+      const hora = new Date(p.cobradoEn ?? p.creadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+      const items = Array.isArray(p.items) ? (p.items as any[]) : [];
+      for (const it of items) {
+        itemsDetalle.push({ mesa: p.mesa, hora, nombre: it.nombre ?? "?", cantidad: it.cantidad ?? 1, precio: it.precio ?? 0, subtotal: (it.precio ?? 0) * (it.cantidad ?? 1) });
+      }
+    }
+    const totalItemsSubtotal = itemsDetalle.reduce((s, i) => s + i.subtotal, 0);
+    const itemsDetalleHtml = itemsDetalle.map((it) =>
+      `<tr><td>${it.mesa}</td><td>${it.hora}</td><td>${it.nombre}</td><td style="text-align:center;">${it.cantidad}</td><td style="text-align:right;">${formatCOP(it.precio)}</td><td style="text-align:right;font-weight:700;">${formatCOP(it.subtotal)}</td></tr>`
+    ).join("") + (itemsDetalle.length > 0
+      ? `<tr style="background:#CC0000;color:#fff;"><td colspan="5" style="font-weight:800;padding:8px 10px;text-transform:uppercase;letter-spacing:.5px;">Total General</td><td style="text-align:right;font-weight:900;padding:8px 10px;">${formatCOP(totalItemsSubtotal)}</td></tr>`
+      : `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin productos vendidos hoy</td></tr>`);
 
     const meseroRowsHtml = meseroRows.map((m) => `<tr><td>${m.nombre}</td><td style="text-align:center;">${m.pedidos}</td><td style="text-align:right;font-weight:700;">${formatCOP(m.ventas)}</td></tr>`).join("");
     const productosRowsHtml = topProductos.map((p, i) => `<tr><td style="text-align:center;">${i + 1}</td><td>${p.nombre}</td><td style="text-align:center;">${p.cantidad}</td><td style="text-align:right;font-weight:700;">${formatCOP(p.total)}</td></tr>`).join("");
@@ -286,8 +311,9 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff
 .payment-row{display:flex;gap:12px;margin-bottom:24px}
 .payment-card{flex:1;background:#f9f9f9;border-radius:12px;padding:14px;border:1px solid #eee}
 .payment-card.green .kpi-value{color:#16a34a}
+.payment-card.violet .kpi-value{color:#7c3aed}
 .payment-card.blue .kpi-value{color:#2563eb}
-.payment-card.purple .kpi-value{color:#7c3aed}
+.payment-card.purple .kpi-value{color:#a855f7}
 h2{font-size:14px;font-weight:800;margin-bottom:12px;color:#1a1a1a;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #CC0000;padding-left:8px}
 table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:12px}
 thead th{background:#CC0000;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left}
@@ -308,13 +334,16 @@ tbody tr:nth-child(even){background:#f9f9f9}tbody tr td{padding:7px 10px;border-
 </div>
 <div class="payment-row">
   <div class="payment-card green"><div class="kpi-label">💵 Efectivo</div><div class="kpi-value">${formatCOP(totalEfectivo)}</div></div>
-  <div class="payment-card blue"><div class="kpi-label">💳 Transferencia</div><div class="kpi-value">${formatCOP(totalTransferencia)}</div></div>
+  <div class="payment-card violet"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-value">${formatCOP(totalTarjeta)}</div></div>
+  <div class="payment-card blue"><div class="kpi-label">💾 Transferencia</div><div class="kpi-value">${formatCOP(totalTransferencia)}</div></div>
   <div class="payment-card purple"><div class="kpi-label">⭐ Propinas</div><div class="kpi-value">${formatCOP(totalPropinas)}</div></div>
 </div>
 ${meseroRows.length > 0 ? `<h2>Ventas por Mesero</h2><table><thead><tr><th>Mesero</th><th style="text-align:center">Pedidos</th><th style="text-align:right">Ventas</th></tr></thead><tbody>${meseroRowsHtml}</tbody></table>` : ""}
 ${topProductos.length > 0 ? `<h2>Top 10 Productos Más Vendidos</h2><table><thead><tr><th style="text-align:center">#</th><th>Producto</th><th style="text-align:center">Cantidad</th><th style="text-align:right">Total</th></tr></thead><tbody>${productosRowsHtml}</tbody></table>` : ""}
 <h2>Detalle de Pedidos Cobrados</h2>
-<table><thead><tr><th>ID</th><th>Mesa</th><th>Hora</th><th>Método</th><th style="text-align:right">Total</th><th style="text-align:right">Propina</th></tr></thead><tbody>${pedidosRows || `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin pedidos cobrados hoy</td></tr>`}</tbody></table>
+<table><thead><tr><th>ID</th><th>Mesa</th><th>Hora Cobro</th><th>Método</th><th style="text-align:right">Total</th><th style="text-align:right">Propina</th></tr></thead><tbody>${pedidosRows || `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">Sin pedidos cobrados hoy</td></tr>`}</tbody></table>
+<h2>Desglose de Productos Vendidos</h2>
+<table><thead><tr><th>Mesa</th><th>Hora</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itemsDetalleHtml}</tbody></table>
 <div class="footer"><p>Este reporte es de uso exclusivo del negocio · TIAMO BURGER POS © ${new Date().getFullYear()}</p></div>
 <button class="print-btn" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
 <script>if(new URLSearchParams(window.location.search).get('autoprint')==='1')window.onload=()=>window.print();</script>
@@ -372,11 +401,13 @@ async function generarReportePeriodoHTML(opts: {
   const totalVentas = cobrados.reduce((s, p) => s + (p.total || 0), 0);
   const totalPropinas = cobrados.reduce((s, p) => s + (p.propina || 0), 0);
   let totalEfectivo = 0;
+  let totalTarjeta = 0;
   let totalTransferencia = 0;
   for (const p of cobrados) {
     const pagos = Array.isArray(p.pagos) ? (p.pagos as any[]) : [];
     for (const pa of pagos) {
       if (pa.metodo === "efectivo") totalEfectivo += pa.monto;
+      else if (pa.metodo === "tarjeta") totalTarjeta += pa.monto;
       else if (pa.metodo === "transferencia") totalTransferencia += pa.monto;
     }
   }
@@ -469,7 +500,8 @@ tbody tr:nth-child(even){background:#f9f9f9}tbody tr td{padding:7px 10px;border-
 </div>
 <div style="display:flex;gap:12px;margin-bottom:24px">
 <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px"><div class="kpi-label">💵 Efectivo</div><div class="kpi-value" style="color:#16a34a">${formatCOP(totalEfectivo)}</div></div>
-<div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px"><div class="kpi-label">💳 Transferencia</div><div class="kpi-value" style="color:#2563eb">${formatCOP(totalTransferencia)}</div></div>
+<div style="flex:1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:14px"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-value" style="color:#7c3aed">${formatCOP(totalTarjeta)}</div></div>
+<div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px"><div class="kpi-label">💾 Transferencia</div><div class="kpi-value" style="color:#2563eb">${formatCOP(totalTransferencia)}</div></div>
 </div>
 ${diasArr.length > 0 ? `<h2>Tendencia de Ventas</h2><div class="chart-card"><div class="chart">${barrasHtml}</div></div>` : ""}
 ${meseros.length > 0 ? `<h2>Ventas por Mesero</h2><table><thead><tr><th>Mesero</th><th style="text-align:center">Pedidos</th><th style="text-align:right">Ventas</th></tr></thead><tbody>${meserosHtml}</tbody></table>` : ""}

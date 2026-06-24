@@ -206,20 +206,25 @@ router.patch("/pedidos/:id", requireAuth, async (req, res) => {
 
     if (!pedido) { res.status(404).json({ error: "Pedido no encontrado" }); return; }
 
-    if (parsed.data.estado === "listo" || parsed.data.estado === "cobrado" || parsed.data.estado === "cancelado") {
+    if (parsed.data.estado === "cancelado") {
+      // Cancelado: liberar mesa solo si no quedan pedidos activos
       const pedidosActivos = await db
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(pedidosTable)
         .where(and(
           eq(pedidosTable.mesa, pedido.mesa),
-          sql`${pedidosTable.estado} in ('nuevo', 'preparando')`,
+          sql`${pedidosTable.estado} in ('nuevo', 'preparando', 'listo')`,
         ));
-
       if ((pedidosActivos[0]?.count ?? 0) === 0) {
         await db.update(mesasTable).set({ estado: "libre", personas: 0, actualizadoEn: new Date() }).where(eq(mesasTable.numero, pedido.mesa));
         broadcast("mesas_actualizadas", {});
       }
+    } else if (parsed.data.estado === "cobrado") {
+      // Cobrado via PATCH: mesa pasa a "en_pago" (pendiente registrar propina y cerrar)
+      await db.update(mesasTable).set({ estado: "en_pago", actualizadoEn: new Date() }).where(eq(mesasTable.numero, pedido.mesa));
+      broadcast("mesas_actualizadas", {});
     }
+    // "listo", "preparando", "nuevo": no cambian estado de mesa
 
     const result = serializePedido(pedido);
     broadcast("pedido_actualizado", result);
@@ -241,12 +246,12 @@ router.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     const usuario = (req as any).usuario;
     const [pedidoActual] = await db.select().from(pedidosTable).where(eq(pedidosTable.id, id));
     if (!pedidoActual) { res.status(404).json({ error: "Pedido no encontrado" }); return; }
-    if (pedidoActual.estado === "cobrado") { res.status(400).json({ error: "El pedido ya fue cobrado" }); return; }
     if (pedidoActual.estado === "cancelado") { res.status(400).json({ error: "El pedido fue cancelado" }); return; }
 
-    const { pagos, propina = 0, nota } = parsed.data;
+    const { pagos, propina = 0, propinaSugerida = 0, propinaAceptada = 0, nota } = parsed.data;
     const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
     const totalConPropina = pedidoActual.total + propina;
+    const cambio = Math.max(0, totalPagado - totalConPropina);
 
     if (totalPagado < totalConPropina) {
       res.status(400).json({ error: `Monto insuficiente. Total: ${totalConPropina}, pagado: ${totalPagado}` });
@@ -254,6 +259,18 @@ router.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     }
 
     const metodoPago = pagos.length === 1 ? pagos[0].metodo : "mixto";
+
+    // Generar número de factura
+    let numeroFactura: string | null = null;
+    try {
+      const [cfg] = await db.select().from(configuracionTable).limit(1);
+      const prefijo = cfg?.prefijoFactura ?? "F";
+      const ultimo = (cfg?.ultimoNumeroFactura ?? 0) + 1;
+      numeroFactura = `${prefijo}${String(ultimo).padStart(6, "0")}`;
+      await db.update(configuracionTable).set({ ultimoNumeroFactura: ultimo }).where(eq(configuracionTable.id, cfg?.id ?? 1));
+    } catch {
+      numeroFactura = `F${String(id).padStart(6, "0")}`;
+    }
 
     const historialPrev = Array.isArray(pedidoActual.historialEstados) ? pedidoActual.historialEstados : [];
     const nuevoHistorial = [
@@ -266,12 +283,18 @@ router.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
       metodoPago: metodoPago as any,
       pagos,
       propina,
+      propinaSugerida,
+      propinaAceptada,
+      propinaRechazada: propinaSugerida > propinaAceptada ? propinaSugerida - propinaAceptada : 0,
+      cambio,
+      numeroFactura,
       cobradoEn: new Date(),
       cobradoPor: usuario?.id ?? null,
       historialEstados: nuevoHistorial,
     }).where(eq(pedidosTable.id, id)).returning();
 
-    await db.update(mesasTable).set({ estado: "libre", personas: 0, actualizadoEn: new Date() }).where(eq(mesasTable.numero, pedidoActual.mesa));
+    // Mesa pasa a "en_pago": cobrada pero pendiente de registrar propina y cerrar
+    await db.update(mesasTable).set({ estado: "en_pago", actualizadoEn: new Date() }).where(eq(mesasTable.numero, pedidoActual.mesa));
 
     // Generar factura e intentar enviar a impresora
     const itemsArray = Array.isArray(pedidoActual.items) ? pedidoActual.items : [];
@@ -284,32 +307,33 @@ router.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     }));
     const facturaTicket = buildFacturaTicket({
       id: pedido.id,
+      numeroFactura,
       mesa: pedidoActual.mesa,
       items: itemsFactura,
       total: pedidoActual.total,
       notas: pedidoActual.notas ?? undefined,
       mesero: pedidoActual.meseroId ? usuario?.nombre ?? undefined : undefined,
-      fecha: new Date(),
-      pagos: pagos.map((p: any) => ({ metodo: p.metodo, monto: p.monto })),
+      fecha: new Date(pedido.cobradoEn),
+      pagos: pagos.map((p: any) => ({ metodo: p.metodo, monto: p.monto, tipoTarjeta: p.tipoTarjeta, banco: p.banco, referencia: p.referencia })),
       propina,
       totalConPropina,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       metodoPago,
       cobradoPor: usuario?.nombre ?? undefined,
     });
-    // Generar binario ESC/POS nativo para impresora termica real
     const facturaEscPos = buildEscPosFactura({
       id: pedido.id,
+      numeroFactura,
       mesa: pedidoActual.mesa,
       items: itemsFactura,
       total: pedidoActual.total,
       notas: pedidoActual.notas ?? undefined,
       mesero: pedidoActual.meseroId ? usuario?.nombre ?? undefined : undefined,
-      fecha: new Date(),
-      pagos: pagos.map((p: any) => ({ metodo: p.metodo, monto: p.monto })),
+      fecha: new Date(pedido.cobradoEn),
+      pagos: pagos.map((p: any) => ({ metodo: p.metodo, monto: p.monto, tipoTarjeta: p.tipoTarjeta, banco: p.banco, referencia: p.referencia })),
       propina,
       totalConPropina,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       metodoPago,
       cobradoPor: usuario?.nombre ?? undefined,
     });
@@ -320,7 +344,7 @@ router.post("/pedidos/:id/cobrar", requireAuth, async (req, res) => {
     broadcast("mesas_actualizadas", {});
     res.json({
       ...result,
-      cambio: Math.max(0, totalPagado - totalConPropina),
+      cambio,
       facturaTicket,
       impresion: impresionFactura,
     });
@@ -351,7 +375,7 @@ router.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
     };
     const items = Array.isArray(pedido.items) ? (pedido.items as any[]) : [];
     const pagos = Array.isArray(pedido.pagos) ? (pedido.pagos as any[]) : [];
-    const fecha = new Date(pedido.creadoEn).toLocaleString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const fecha = new Date(pedido.cobradoEn ?? pedido.creadoEn).toLocaleString("es-CO", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
     const formatCOP = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: cfg.moneda, minimumFractionDigits: 0 }).format(n);
 
     // Build plain-text factura that fits 58mm thermal printer (30 chars wide)
@@ -376,7 +400,7 @@ router.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
       div("="), ctr(cfg.nombreNegocio.toUpperCase()), ctr("Sistema POS v3"),
       cfg.telefono ? ctr(`Tel:${cfg.telefono}`) : "",
       div("="), ctr("FACTURA VENTA"),
-      ctr(`#${String(pedido.id).padStart(4, "0")} Mesa${pedido.mesa}`),
+      ctr(`${pedido.numeroFactura ? `Factura ${pedido.numeroFactura}` : `#${String(pedido.id).padStart(4, "0")}`} Mesa${pedido.mesa}`),
       div("="), fecha,
       `Mesero:${(pedido as any).meseroNombre ?? "-"}`,
       `Cajero:${(pedido as any).cobradoPorNombre ?? "-"}`,
@@ -389,27 +413,74 @@ router.get("/pedidos/:id/factura", requireAuth, async (req, res) => {
       div("="), ctr(cfg.mensajeFactura || "Gracias por su visita!"), div("="),
     ].filter(Boolean).join("\n");
 
+    const itemsHtml = items.map((item: any) => {
+      const qty = Number(item.cantidad) || 0;
+      const sub = formatCOP((item.precio || 0) * qty);
+      const obs = item.observaciones ? `<div class="obs">&#x21B3; ${esc(String(item.observaciones))}</div>` : "";
+      return `<div class="row"><span>${qty}x ${esc(item.nombre)}</span><span>${sub}</span></div>${obs}`;
+    }).join("");
+
+    const pagosHtml = pagos.map((p: any) => {
+      const label = p.metodo === "efectivo" ? "Efectivo:" : p.metodo === "transferencia" ? "Transferencia:" : esc(p.metodo) + ":";
+      return `<div class="row"><span>${label}</span><span>${formatCOP(p.monto || 0)}</span></div>`;
+    }).join("");
+
+    const totalFinal = (pedido.total || 0) + (pedido.propina || 0);
+    const cambioVal = (pedido as any).cambio ?? 0;
+
     const html = `<!DOCTYPE html>
 <html lang="es"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Factura #${pedido.id} — ${cfg.nombreNegocio}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Courier New',monospace;width:58mm;margin:0 auto;padding:4px;color:#000;background:#fff;font-size:11px;line-height:1.35}
-    pre{white-space:pre;font-family:inherit;font-size:11px;line-height:1.35;margin:0}
-    .header{text-align:center;padding:8px 0;border-bottom:1px dashed #333;margin-bottom:8px}
-    .brand{font-size:14px;font-weight:900;letter-spacing:1px;color:#CC0000}
-    .tagline{font-size:9px;color:#666}
-    @media print{@page{margin:0;size:58mm auto}body{padding:2px;width:58mm}.no-print{display:none}}
+    body{font-family:'Courier New',Courier,monospace;width:72mm;max-width:72mm;margin:0 auto;padding:6px;color:#000;background:#fff;font-size:13px;line-height:1.6;font-weight:700}
+    .center{text-align:center}
+    .brand{font-size:22px;font-weight:900;letter-spacing:2px;color:#CC0000;text-transform:uppercase}
+    .tagline{font-size:12px;font-weight:700;margin-top:2px}
+    .info{font-size:12px;font-weight:700;margin:1px 0}
+    .section-title{font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:1px}
+    .order-num{font-size:13px;font-weight:700}
+    .hr{border:none;border-top:1px dashed #000;margin:5px 0}
+    .hr-solid{border:none;border-top:2px solid #000;margin:5px 0}
+    .row{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:13px;margin:3px 0;gap:4px}
+    .row span:first-child{flex:1}
+    .row span:last-child{white-space:nowrap;font-weight:700}
+    .row.big{font-size:18px;font-weight:900;margin:4px 0}
+    .obs{font-size:11px;font-weight:700;padding-left:14px;margin-bottom:2px}
+    .footer{font-size:14px;font-weight:900;text-align:center;margin-top:4px}
+    @media print{@page{margin:0;size:72mm auto}body{width:72mm;padding:2px}.no-print{display:none!important}}
   </style>
 </head><body>
-  <div class="header">
+  <div class="center">
     <div class="brand">${cfg.nombreNegocio}</div>
     ${cfg.slogan ? `<div class="tagline">${cfg.slogan}</div>` : ""}
+    ${cfg.telefono ? `<div class="info">Tel: ${cfg.telefono}</div>` : ""}
+    ${cfg.direccion ? `<div class="info">${cfg.direccion}</div>` : ""}
+    ${cfg.ruc ? `<div class="info">NIT: ${cfg.ruc}</div>` : ""}
   </div>
-  <pre>${ticketText.replace(/</g, "&lt;")}</pre>
-  <div class="no-print" style="text-align:center;margin-top:16px;">
-    <button onclick="window.print()" style="background:#CC0000;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>
+  <hr class="hr-solid">
+  <div class="center section-title">FACTURA DE VENTA</div>
+  <div class="center order-num">${pedido.numeroFactura ? `Factura: ${pedido.numeroFactura}` : `N&deg; ${String(pedido.id).padStart(4, "0")}`} &nbsp;&middot;&nbsp; Mesa ${pedido.mesa}</div>
+  <hr class="hr">
+  <div class="info">Fecha: ${fecha}</div>
+  <div class="info">Mesero: ${esc((pedido as any).meseroNombre ?? "-")}</div>
+  <div class="info">Cajero: ${esc((pedido as any).cobradoPorNombre ?? "-")}</div>
+  <hr class="hr">
+  ${itemsHtml}
+  <hr class="hr">
+  <div class="row"><span>Subtotal:</span><span>${formatCOP(pedido.total || 0)}</span></div>
+  ${(pedido.propina || 0) > 0 ? `<div class="row"><span>Propina:</span><span>${formatCOP(pedido.propina)}</span></div>` : ""}
+  <hr class="hr-solid">
+  <div class="row big"><span>TOTAL:</span><span>${formatCOP(totalFinal)}</span></div>
+  <hr class="hr-solid">
+  ${pagosHtml}
+  ${cambioVal > 0 ? `<div class="row"><span>Cambio:</span><span>${formatCOP(cambioVal)}</span></div>` : ""}
+  <hr class="hr">
+  <div class="footer">${cfg.mensajeFactura || "¡Gracias por su visita!"}</div>
+  <div class="no-print" style="text-align:center;margin-top:16px">
+    <button onclick="window.print()" style="background:#CC0000;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:900;cursor:pointer">🖨️ Imprimir Factura</button>
+    <button onclick="window.close()" style="background:#555;color:#fff;border:none;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px">✕ Cerrar</button>
   </div>
   <script>if(new URLSearchParams(window.location.search).get('autoprint')==='1')window.onload=()=>window.print();</script>
 </body></html>`;

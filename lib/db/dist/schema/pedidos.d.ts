@@ -1,0 +1,495 @@
+import { z } from "zod";
+export declare const itemPedidoSchema: z.ZodObject<{
+    id: z.ZodString;
+    nombre: z.ZodString;
+    emoji: z.ZodString;
+    precio: z.ZodNumber;
+    cantidad: z.ZodNumber;
+    observaciones: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    nombre: string;
+    id: string;
+    emoji: string;
+    precio: number;
+    cantidad: number;
+    observaciones?: string | undefined;
+}, {
+    nombre: string;
+    id: string;
+    emoji: string;
+    precio: number;
+    cantidad: number;
+    observaciones?: string | undefined;
+}>;
+export declare const pagoSchema: z.ZodObject<{
+    metodo: z.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
+    monto: z.ZodNumber;
+    tipoTarjeta: z.ZodOptional<z.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+    banco: z.ZodOptional<z.ZodString>;
+    referencia: z.ZodOptional<z.ZodString>;
+    ultimos4: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    metodo: "efectivo" | "tarjeta" | "transferencia";
+    monto: number;
+    tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+    banco?: string | undefined;
+    referencia?: string | undefined;
+    ultimos4?: string | undefined;
+}, {
+    metodo: "efectivo" | "tarjeta" | "transferencia";
+    monto: number;
+    tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+    banco?: string | undefined;
+    referencia?: string | undefined;
+    ultimos4?: string | undefined;
+}>;
+export declare const historialEstadoSchema: z.ZodObject<{
+    estado: z.ZodString;
+    usuarioId: z.ZodOptional<z.ZodNumber>;
+    usuarioNombre: z.ZodOptional<z.ZodString>;
+    ts: z.ZodString;
+    nota: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    estado: string;
+    ts: string;
+    usuarioId?: number | undefined;
+    usuarioNombre?: string | undefined;
+    nota?: string | undefined;
+}, {
+    estado: string;
+    ts: string;
+    usuarioId?: number | undefined;
+    usuarioNombre?: string | undefined;
+    nota?: string | undefined;
+}>;
+export declare const pedidosTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "pedidos";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgSerial";
+            data: number;
+            driverParam: number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        mesa: import("drizzle-orm/pg-core").PgColumn<{
+            name: "mesa";
+            tableName: "pedidos";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        items: import("drizzle-orm/pg-core").PgColumn<{
+            name: "items";
+            tableName: "pedidos";
+            dataType: "json";
+            columnType: "PgJsonb";
+            data: unknown;
+            driverParam: unknown;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        estado: import("drizzle-orm/pg-core").PgColumn<{
+            name: "estado";
+            tableName: "pedidos";
+            dataType: "string";
+            columnType: "PgText";
+            data: "nuevo" | "preparando" | "listo" | "cobrado" | "cancelado";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["nuevo", "preparando", "listo", "cobrado", "cancelado"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        total: import("drizzle-orm/pg-core").PgColumn<{
+            name: "total";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        notas: import("drizzle-orm/pg-core").PgColumn<{
+            name: "notas";
+            tableName: "pedidos";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        meseroId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "mesero_id";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        metodoPago: import("drizzle-orm/pg-core").PgColumn<{
+            name: "metodo_pago";
+            tableName: "pedidos";
+            dataType: "string";
+            columnType: "PgText";
+            data: "efectivo" | "tarjeta" | "transferencia" | "mixto" | "pendiente";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["efectivo", "tarjeta", "transferencia", "mixto", "pendiente"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        pagos: import("drizzle-orm/pg-core").PgColumn<{
+            name: "pagos";
+            tableName: "pedidos";
+            dataType: "json";
+            columnType: "PgJsonb";
+            data: {
+                metodo: string;
+                monto: number;
+                tipoTarjeta?: string;
+                banco?: string;
+                referencia?: string;
+                ultimos4?: string;
+            }[];
+            driverParam: unknown;
+            notNull: false;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            $type: {
+                metodo: string;
+                monto: number;
+                tipoTarjeta?: string;
+                banco?: string;
+                referencia?: string;
+                ultimos4?: string;
+            }[];
+        }>;
+        propina: import("drizzle-orm/pg-core").PgColumn<{
+            name: "propina";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        propinaSugerida: import("drizzle-orm/pg-core").PgColumn<{
+            name: "propina_sugerida";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        propinaAceptada: import("drizzle-orm/pg-core").PgColumn<{
+            name: "propina_aceptada";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        propinaRechazada: import("drizzle-orm/pg-core").PgColumn<{
+            name: "propina_rechazada";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        cambio: import("drizzle-orm/pg-core").PgColumn<{
+            name: "cambio";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        numeroFactura: import("drizzle-orm/pg-core").PgColumn<{
+            name: "numero_factura";
+            tableName: "pedidos";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        cobradoEn: import("drizzle-orm/pg-core").PgColumn<{
+            name: "cobrado_en";
+            tableName: "pedidos";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        cobradoPor: import("drizzle-orm/pg-core").PgColumn<{
+            name: "cobrado_por";
+            tableName: "pedidos";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        historialEstados: import("drizzle-orm/pg-core").PgColumn<{
+            name: "historial_estados";
+            tableName: "pedidos";
+            dataType: "json";
+            columnType: "PgJsonb";
+            data: {
+                estado: string;
+                usuarioId?: number;
+                usuarioNombre?: string;
+                ts: string;
+                nota?: string;
+            }[];
+            driverParam: unknown;
+            notNull: false;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            $type: {
+                estado: string;
+                usuarioId?: number;
+                usuarioNombre?: string;
+                ts: string;
+                nota?: string;
+            }[];
+        }>;
+        creadoEn: import("drizzle-orm/pg-core").PgColumn<{
+            name: "creado_en";
+            tableName: "pedidos";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
+export declare const updatePedidoSchema: z.ZodObject<{
+    estado: z.ZodOptional<z.ZodEnum<["nuevo", "preparando", "listo", "cobrado", "cancelado"]>>;
+    notas: z.ZodOptional<z.ZodString>;
+    nota: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    estado?: "nuevo" | "preparando" | "listo" | "cobrado" | "cancelado" | undefined;
+    nota?: string | undefined;
+    notas?: string | undefined;
+}, {
+    estado?: "nuevo" | "preparando" | "listo" | "cobrado" | "cancelado" | undefined;
+    nota?: string | undefined;
+    notas?: string | undefined;
+}>;
+export declare const cobrarPedidoSchema: z.ZodObject<{
+    pagos: z.ZodArray<z.ZodObject<{
+        metodo: z.ZodEnum<["efectivo", "tarjeta", "transferencia"]>;
+        monto: z.ZodNumber;
+        tipoTarjeta: z.ZodOptional<z.ZodEnum<["debito", "credito", "datafono", "daviplata", "nequi", "boton_bancolombia"]>>;
+        banco: z.ZodOptional<z.ZodString>;
+        referencia: z.ZodOptional<z.ZodString>;
+        ultimos4: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        metodo: "efectivo" | "tarjeta" | "transferencia";
+        monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
+    }, {
+        metodo: "efectivo" | "tarjeta" | "transferencia";
+        monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
+    }>, "many">;
+    propina: z.ZodOptional<z.ZodNumber>;
+    propinaSugerida: z.ZodOptional<z.ZodNumber>;
+    propinaAceptada: z.ZodOptional<z.ZodNumber>;
+    nota: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    pagos: {
+        metodo: "efectivo" | "tarjeta" | "transferencia";
+        monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
+    }[];
+    nota?: string | undefined;
+    propina?: number | undefined;
+    propinaSugerida?: number | undefined;
+    propinaAceptada?: number | undefined;
+}, {
+    pagos: {
+        metodo: "efectivo" | "tarjeta" | "transferencia";
+        monto: number;
+        tipoTarjeta?: "debito" | "credito" | "datafono" | "daviplata" | "nequi" | "boton_bancolombia" | undefined;
+        banco?: string | undefined;
+        referencia?: string | undefined;
+        ultimos4?: string | undefined;
+    }[];
+    nota?: string | undefined;
+    propina?: number | undefined;
+    propinaSugerida?: number | undefined;
+    propinaAceptada?: number | undefined;
+}>;
+export type Pedido = typeof pedidosTable.$inferSelect;
+export type ItemPedido = z.infer<typeof itemPedidoSchema>;
+export type Pago = z.infer<typeof pagoSchema>;
+//# sourceMappingURL=pedidos.d.ts.map

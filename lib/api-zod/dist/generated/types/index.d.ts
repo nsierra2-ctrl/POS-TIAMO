@@ -44,6 +44,7 @@ export * from "./mesasStats";
 export * from "./metodoPago";
 export * from "./pago";
 export * from "./pagoMetodo";
+export * from "./pagoTipoTarjeta";
 export * from "./pedido";
 export * from "./producto";
 export * from "./productoTop";

@@ -308,7 +308,7 @@ export default function PedidoPage() {
         onSuccess: async (pedido) => {
           actualizarMesaMutation.mutate({
             numero: mesaNum,
-            data: { estado: "proceso", personas: personasStr ? parseInt(personasStr) : 1 },
+            data: { estado: "ocupada", personas: personasStr ? parseInt(personasStr) : 1 },
           });
           queryClient.invalidateQueries({ queryKey: getGetMesasQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetPedidosQueryKey() });

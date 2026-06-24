@@ -22,7 +22,9 @@ export type EstadoMesa = (typeof EstadoMesa)[keyof typeof EstadoMesa];
 export declare const EstadoMesa: {
     readonly libre: "libre";
     readonly ocupada: "ocupada";
-    readonly proceso: "proceso";
+    readonly lista_cobro: "lista_cobro";
+    readonly en_pago: "en_pago";
+    readonly finalizada: "finalizada";
 };
 export type EstadoPedido = (typeof EstadoPedido)[keyof typeof EstadoPedido];
 export declare const EstadoPedido: {
@@ -75,11 +77,25 @@ export interface ItemPedido {
 export type PagoMetodo = (typeof PagoMetodo)[keyof typeof PagoMetodo];
 export declare const PagoMetodo: {
     readonly efectivo: "efectivo";
+    readonly tarjeta: "tarjeta";
     readonly transferencia: "transferencia";
+};
+export type PagoTipoTarjeta = (typeof PagoTipoTarjeta)[keyof typeof PagoTipoTarjeta];
+export declare const PagoTipoTarjeta: {
+    readonly debito: "debito";
+    readonly credito: "credito";
+    readonly datafono: "datafono";
+    readonly daviplata: "daviplata";
+    readonly nequi: "nequi";
+    readonly boton_bancolombia: "boton_bancolombia";
 };
 export interface Pago {
     metodo: PagoMetodo;
     monto: number;
+    tipoTarjeta?: PagoTipoTarjeta;
+    banco?: string;
+    referencia?: string;
+    ultimos4?: string;
 }
 export interface HistorialEstado {
     estado: string;
@@ -183,6 +199,8 @@ export interface ActualizarPedidoInput {
 export interface CobrarPedidoInput {
     pagos: Pago[];
     propina?: number;
+    propinaSugerida?: number;
+    propinaAceptada?: number;
     nota?: string;
 }
 export interface ResultadoCobro {
@@ -214,6 +232,7 @@ export interface ResumenGeneral {
     crecimientoSemana: number;
     tiempoPromedioMin: number;
     efectivoHoy: number;
+    tarjetaHoy: number;
     transferenciaHoy: number;
     propinasHoy: number;
 }
@@ -222,6 +241,7 @@ export interface VentaDiaria {
     ventas: number;
     pedidos: number;
     efectivo: number;
+    tarjeta: number;
     transferencia: number;
 }
 export interface ProductoTop {
@@ -282,6 +302,7 @@ export interface ResumenCierre {
 export interface ResumenDiaCaja {
     totalVentas: number;
     totalEfectivo: number;
+    totalTarjeta: number;
     totalTransferencia: number;
     totalPropinas: number;
     pedidosCobrados: number;

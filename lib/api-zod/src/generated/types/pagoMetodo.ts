@@ -10,5 +10,6 @@ export type PagoMetodo = (typeof PagoMetodo)[keyof typeof PagoMetodo];
 
 export const PagoMetodo = {
   efectivo: "efectivo",
+  tarjeta: "tarjeta",
   transferencia: "transferencia",
 } as const;

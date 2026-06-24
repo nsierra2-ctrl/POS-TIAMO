@@ -26,7 +26,9 @@ export const formatPrice = (valor: number) => {
 export const STATUS_COLORS: Record<string, string> = {
   libre: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   ocupada: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  proceso: "bg-red-500/10 text-red-500 border-red-500/20",
+  lista_cobro: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  en_pago: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  finalizada: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
   nuevo: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   preparando: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   listo: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",

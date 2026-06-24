@@ -5,7 +5,7 @@ import { z } from "zod";
 export const mesasTable = pgTable("mesas", {
   numero: text("numero").primaryKey(),
   nombre: text("nombre"),
-  estado: text("estado", { enum: ["libre", "ocupada", "proceso"] })
+  estado: text("estado", { enum: ["libre", "ocupada", "lista_cobro", "en_pago", "finalizada"] })
     .notNull()
     .default("libre"),
   personas: integer("personas").notNull().default(0),

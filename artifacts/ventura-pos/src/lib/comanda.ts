@@ -69,7 +69,7 @@ export function imprimirComanda(pedido: ComandaData) {
     .nota-box { background: #f0f0f0; border: 1px solid #000; padding: 4px; margin: 3px 0; }
     .nota-title { font-weight: bold; font-size: 10px; letter-spacing: 1px; }
     .nota-text { margin-top: 2px; font-size: 12px; }
-    .footer { text-align: center; font-size: 10px; color: #555; margin-top: 6px; }
+    .footer { text-align: center; font-size: 10px; color: #222; margin-top: 6px; }
     @media print {
       @page { margin: 0; size: 80mm auto; }
       body { padding: 3mm 2mm; }
@@ -78,8 +78,8 @@ export function imprimirComanda(pedido: ComandaData) {
 </head>
 <body>
   <div class="header">
-    <div class="restaurant">VENTURA'S PIZZA</div>
-    <div class="subtitle">Sistema VENTURA OS</div>
+    <div class="restaurant">TIAMO BURGER</div>
+    <div class="subtitle">Sistema POS</div>
   </div>
 
   <div class="divider solid"></div>

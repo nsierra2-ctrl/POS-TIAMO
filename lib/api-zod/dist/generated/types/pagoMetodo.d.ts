@@ -8,6 +8,7 @@
 export type PagoMetodo = (typeof PagoMetodo)[keyof typeof PagoMetodo];
 export declare const PagoMetodo: {
     readonly efectivo: "efectivo";
+    readonly tarjeta: "tarjeta";
     readonly transferencia: "transferencia";
 };
 //# sourceMappingURL=pagoMetodo.d.ts.map

@@ -9,6 +9,8 @@ export type EstadoMesa = (typeof EstadoMesa)[keyof typeof EstadoMesa];
 export declare const EstadoMesa: {
     readonly libre: "libre";
     readonly ocupada: "ocupada";
-    readonly proceso: "proceso";
+    readonly lista_cobro: "lista_cobro";
+    readonly en_pago: "en_pago";
+    readonly finalizada: "finalizada";
 };
 //# sourceMappingURL=estadoMesa.d.ts.map

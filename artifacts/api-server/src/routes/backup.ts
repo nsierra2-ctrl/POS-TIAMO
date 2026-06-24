@@ -131,14 +131,14 @@ router.post("/admin/restore", requireAuth, requireRol("admin"), async (req, res)
             const existing = await tx.select().from(mesasTable);
             const numbers = new Set(existing.map((x) => x.numero));
             if (!numbers.has(m.numero)) {
-              await tx.insert(mesasTable).values({ numero: m.numero, estado: (m.estado ?? "libre") as "libre" | "ocupada" | "proceso", personas: m.personas ?? 0 });
+              await tx.insert(mesasTable).values({ numero: m.numero, estado: (m.estado ?? "libre") as "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada", personas: m.personas ?? 0 });
               stats.mesas++;
             }
           } else {
             const existing = await tx.select().from(mesasTable);
             const numbers = new Set(existing.map((x) => x.numero));
             if (!numbers.has(m.numero)) {
-              await tx.insert(mesasTable).values({ numero: m.numero, estado: (m.estado ?? "libre") as "libre" | "ocupada" | "proceso", personas: m.personas ?? 0 });
+              await tx.insert(mesasTable).values({ numero: m.numero, estado: (m.estado ?? "libre") as "libre" | "ocupada" | "lista_cobro" | "en_pago" | "finalizada", personas: m.personas ?? 0 });
               stats.mesas++;
             }
           }

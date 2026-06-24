@@ -3,6 +3,11 @@ name: stripe
 description: Guidelines for using Stripe to integrate payments in mobile apps and any subsequent CRUD operations related to any Stripe entities
 ---
 
+## Read the monetization skill first
+
+Before using anything in this skill, read the `monetization` skill and follow its routing instructions. It is the single source of truth for choosing a payment provider on Replit. Only continue with this Stripe skill once the monetization skill has confirmed that Stripe is the right provider (either because the user explicitly named Stripe, the project already has Stripe wired up, or the routing question resolved to Stripe).
+
+
 ## Introduction
 
 Replit offers a native integration with Stripe that allows users to implement payments in their applications
@@ -13,13 +18,13 @@ Replit offers a native integration with Stripe that allows users to implement pa
     - `stripe` - Official Stripe SDK for API operations
     - `stripe-replit-sync` - Handles webhook processing and database sync. Documentation: https://www.npmjs.com/package/stripe-replit-sync
 
-    Do not install them in any workspace package. If they are not installed, use pnpm to install them via the following command: `$ cd /home/runner/workspace && pnpm add -w <packages>`
+    If they are not installed, use npm to install them: `$ cd /home/runner/workspace && npm install <packages>`
 
 
 2. The Stripe integration must be connected to the repl. You can do this by proposing the integration. Reference the `integrations` skill if necessary.
     Once connected, create `stripeClient.ts` using the template from the code-templates reference -- this file fetches Stripe credentials from the Replit connection API and provides the authenticated client via `getUncachableStripeClient()`.
 
-    Create it in both the API server directory and the scripts directory.
+    Create it in the `server/` directory.
 
 
 3. Ensure a PostgreSQL database exists. If you don't have one yet, use the tool to create a PostgreSQL database. Never use memory database for storing Stripe data.
@@ -28,10 +33,10 @@ You are required to ensure these requirements are met before setting up or using
 
 ## Project Structure
 
-- **Scripts directory**: The `@workspace/scripts` monorepo package (e.g., `src/seed-products.ts`)
-- **Run a script**: `pnpm --filter @workspace/scripts exec tsx src/<script>.ts`
-- **API server directory**: Monorepo package defining Express API server code
-- **Client app directory**: The frontend application
+- **Scripts directory**: `scripts/` at the workspace root (e.g., `scripts/seed-products.ts`)
+- **Run a script**: `npx tsx scripts/<script>.ts`
+- **API server directory**: `server/`
+- **Client app directory**: `client/`
 
 Reference files use these terms. Map them to these concrete paths.
 

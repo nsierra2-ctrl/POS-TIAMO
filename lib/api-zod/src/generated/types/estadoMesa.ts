@@ -11,5 +11,7 @@ export type EstadoMesa = (typeof EstadoMesa)[keyof typeof EstadoMesa];
 export const EstadoMesa = {
   libre: "libre",
   ocupada: "ocupada",
-  proceso: "proceso",
+  lista_cobro: "lista_cobro",
+  en_pago: "en_pago",
+  finalizada: "finalizada",
 } as const;
